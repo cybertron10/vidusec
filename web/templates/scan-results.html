@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.title}}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+        .transition-all {
+            transition: all 0.3s ease;
+        }
+        .sidebar-item {
+            transition: all 0.2s ease;
+        }
+        .sidebar-item:hover {
+            background-color: #f3f4f6;
+        }
+        .sidebar-item.active {
+            background-color: #3b82f6;
+            color: white;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation Header -->
+    <nav class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <a href="/dashboard" class="text-gray-600 hover:text-gray-900 mr-4">
+                        <i class="fas fa-arrow-left"></i>
+                    </a>
+                    <h1 class="text-xl font-semibold text-gray-900">Scan Results</h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span id="userInfo" class="text-sm text-gray-600"></span>
+                    <button onclick="logout()" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors">
+                        <i class="fas fa-sign-out-alt mr-2"></i>Logout
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Scan Summary (Top Panel) -->
+    <div class="bg-white border-b border-gray-200 p-6">
+        <div class="max-w-7xl mx-auto">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 id="scanTitle" class="text-2xl font-bold text-gray-900">Loading...</h2>
+                    <p id="scanUrl" class="text-gray-600 mt-1"></p>
+                </div>
+                <div class="flex items-center space-x-6">
+                    <div class="text-center">
+                        <div id="scanStatus" class="text-sm font-medium text-gray-500">Status</div>
+                        <div id="scanStatusBadge" class="mt-1"></div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-sm font-medium text-gray-500">Progress</div>
+                        <div id="scanProgress" class="mt-1 text-lg font-semibold text-gray-900">0%</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-sm font-medium text-gray-500">Endpoints Found</div>
+                        <div id="endpointCount" class="mt-1 text-lg font-semibold text-gray-900">0</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-sm font-medium text-gray-500">Scan Date</div>
+                        <div id="scanDate" class="mt-1 text-sm text-gray-900"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="max-w-7xl mx-auto flex h-screen">
+        <!-- Left Sidebar (Stable) -->
+        <div class="w-64 bg-white border-r border-gray-200 flex-shrink-0">
+            <div class="p-4">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Results</h3>
+                <nav class="space-y-2">
+                    <button id="endpointsBtn" onclick="showSection('endpoints')" class="sidebar-item w-full text-left px-4 py-3 rounded-lg font-medium text-gray-700 active">
+                        <i class="fas fa-link mr-3"></i>Endpoints
+                        <span id="endpointsCount" class="ml-auto bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">0</span>
+                    </button>
+                    <button id="vulnerabilitiesBtn" onclick="showSection('vulnerabilities')" class="sidebar-item w-full text-left px-4 py-3 rounded-lg font-medium text-gray-700">
+                        <i class="fas fa-shield-alt mr-3"></i>Vulnerabilities
+                        <span id="vulnerabilitiesCount" class="ml-auto bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full">0</span>
+                    </button>
+                    <button id="formsBtn" onclick="showSection('forms')" class="sidebar-item w-full text-left px-4 py-3 rounded-lg font-medium text-gray-700">
+                        <i class="fas fa-wpforms mr-3"></i>Forms
+                        <span id="formsCount" class="ml-auto bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">0</span>
+                    </button>
+                    <button id="javascriptBtn" onclick="showSection('javascript')" class="sidebar-item w-full text-left px-4 py-3 rounded-lg font-medium text-gray-700">
+                        <i class="fas fa-code mr-3"></i>JavaScript APIs
+                        <span id="javascriptCount" class="ml-auto bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full">0</span>
+                    </button>
+                    <button id="exportBtn" onclick="exportResults()" class="sidebar-item w-full text-left px-4 py-3 rounded-lg font-medium text-gray-700">
+                        <i class="fas fa-download mr-3"></i>Export Results
+                    </button>
+                </nav>
+            </div>
+        </div>
+
+        <!-- Right Content Panel (Scrollable) -->
+        <div class="flex-1 overflow-hidden">
+            <div id="contentArea" class="h-full overflow-y-auto p-6">
+                <!-- Endpoints Section -->
+                <div id="endpointsSection" class="section">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-xl font-semibold text-gray-900">Discovered Endpoints</h3>
+                        <div class="flex space-x-2">
+                            <select id="endpointFilter" onchange="filterEndpoints()" class="border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                                <option value="all">All Endpoints</option>
+                                <option value="GET">GET Requests</option>
+                                <option value="POST">POST Requests</option>
+                                <option value="JS">JavaScript APIs</option>
+                            </select>
+                            <input type="text" id="endpointSearch" onkeyup="searchEndpoints()" placeholder="Search endpoints..." class="border border-gray-300 rounded-lg px-3 py-2 text-sm w-64">
+                        </div>
+                    </div>
+                    <div id="endpointsList" class="space-y-4">
+                        <!-- Endpoints will be loaded here -->
+                    </div>
+                </div>
+
+                <!-- Vulnerabilities Section (Placeholder) -->
+                <div id="vulnerabilitiesSection" class="section hidden">
+                    <h3 class="text-xl font-semibold text-gray-900 mb-6">Vulnerabilities</h3>
+                    <div class="text-center py-12">
+                        <i class="fas fa-shield-alt text-4xl text-gray-400 mb-4"></i>
+                        <p class="text-gray-500">Vulnerability scanning coming soon...</p>
+                    </div>
+                </div>
+
+                <!-- Forms Section (Placeholder) -->
+                <div id="formsSection" class="section hidden">
+                    <h3 class="text-xl font-semibold text-gray-900 mb-6">Forms</h3>
+                    <div class="text-center py-12">
+                        <i class="fas fa-wpforms text-4xl text-gray-400 mb-4"></i>
+                        <p class="text-gray-500">Form analysis coming soon...</p>
+                    </div>
+                </div>
+
+                <!-- JavaScript Section (Placeholder) -->
+                <div id="javascriptSection" class="section hidden">
+                    <h3 class="text-xl font-semibold text-gray-900 mb-6">JavaScript APIs</h3>
+                    <div class="text-center py-12">
+                        <i class="fas fa-code text-4xl text-gray-400 mb-4"></i>
+                        <p class="text-gray-500">JavaScript API analysis coming soon...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toastContainer" class="fixed top-4 right-4 z-50"></div>
+
+    <script>
+        class ScanResults {
+            constructor() {
+                this.token = localStorage.getItem('vidusec_token');
+                this.user = JSON.parse(localStorage.getItem('vidusec_user') || 'null');
+                this.scanId = this.getScanIdFromUrl();
+                this.scanData = null;
+                this.results = [];
+                this.currentSection = 'endpoints';
+                this.init();
+            }
+
+            init() {
+                if (!this.token) {
+                    window.location.href = '/';
+                    return;
+                }
+
+                this.updateUserInfo();
+                this.loadScanData();
+                this.loadScanResults();
+            }
+
+            getScanIdFromUrl() {
+                const path = window.location.pathname;
+                const match = path.match(/\/scan-results\/(\d+)/);
+                return match ? parseInt(match[1]) : null;
+            }
+
+            updateUserInfo() {
+                const userInfo = document.getElementById('userInfo');
+                if (this.user) {
+                    userInfo.textContent = `Welcome, ${this.user.username}`;
+                }
+            }
+
+            async loadScanData() {
+                try {
+                    const response = await this.apiCall(`/scanner/scans/${this.scanId}`);
+                    if (response.ok) {
+                        this.scanData = await response.json();
+                        this.updateScanSummary();
+                    } else {
+                        this.showToast('Error loading scan data', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error loading scan data:', error);
+                    this.showToast('Error loading scan data', 'error');
+                }
+            }
+
+            async loadScanResults() {
+                try {
+                    const response = await this.apiCall(`/scanner/scans/${this.scanId}/results`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        this.results = data.results || [];
+                        this.updateCounts();
+                        this.displayEndpoints();
+                    } else {
+                        this.showToast('Error loading scan results', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error loading scan results:', error);
+                    this.showToast('Error loading scan results', 'error');
+                }
+            }
+
+            updateScanSummary() {
+                if (!this.scanData) return;
+
+                document.getElementById('scanTitle').textContent = `Scan #${this.scanData.scan.id}`;
+                document.getElementById('scanUrl').textContent = this.scanData.scan.target_url;
+                document.getElementById('scanProgress').textContent = `${this.scanData.scan.progress}%`;
+                document.getElementById('scanDate').textContent = new Date(this.scanData.scan.created_at).toLocaleString();
+
+                // Update status badge
+                const statusBadge = document.getElementById('scanStatusBadge');
+                const status = this.scanData.scan.status;
+                statusBadge.className = `inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                    status === 'completed' ? 'bg-green-100 text-green-800' :
+                    status === 'running' ? 'bg-yellow-100 text-yellow-800' :
+                    status === 'failed' ? 'bg-red-100 text-red-800' :
+                    'bg-gray-100 text-gray-800'
+                }`;
+                statusBadge.textContent = status;
+            }
+
+            updateCounts() {
+                const endpoints = this.results.filter(r => r.endpoint_type === 'GET' || r.endpoint_type === 'POST');
+                const jsEndpoints = this.results.filter(r => r.endpoint_type === 'JS');
+                const forms = this.results.filter(r => r.endpoint_type === 'POST' && r.form_data && Object.keys(r.form_data).length > 0);
+
+                document.getElementById('endpointCount').textContent = endpoints.length;
+                document.getElementById('endpointsCount').textContent = endpoints.length;
+                document.getElementById('javascriptCount').textContent = jsEndpoints.length;
+                document.getElementById('formsCount').textContent = forms.length;
+                document.getElementById('vulnerabilitiesCount').textContent = '0'; // Placeholder
+            }
+
+            displayEndpoints() {
+                const container = document.getElementById('endpointsList');
+                if (this.results.length === 0) {
+                    container.innerHTML = '<div class="text-center py-12"><i class="fas fa-link text-4xl text-gray-400 mb-4"></i><p class="text-gray-500">No endpoints found</p></div>';
+                    return;
+                }
+
+                container.innerHTML = this.results.map(result => `
+                    <div class="bg-white border border-gray-200 rounded-lg p-4 card-hover transition-all">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <div class="flex items-center mb-2">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                        result.endpoint_type === 'GET' ? 'bg-blue-100 text-blue-800' :
+                                        result.endpoint_type === 'POST' ? 'bg-green-100 text-green-800' :
+                                        'bg-yellow-100 text-yellow-800'
+                                    }">
+                                        ${result.method || result.endpoint_type}
+                                    </span>
+                                    <span class="ml-2 text-sm text-gray-500">${result.endpoint_type}</span>
+                                </div>
+                                <h4 class="text-lg font-medium text-gray-900 mb-2">${result.url}</h4>
+                                ${result.description ? `<p class="text-sm text-gray-600 mb-3">${result.description}</p>` : ''}
+                                
+                                ${result.parameters && Object.keys(result.parameters).length > 0 ? `
+                                    <div class="mb-3">
+                                        <h5 class="text-sm font-medium text-gray-700 mb-1">Parameters:</h5>
+                                        <div class="bg-gray-50 rounded p-2 text-sm">
+                                            <pre class="whitespace-pre-wrap">${JSON.stringify(result.parameters, null, 2)}</pre>
+                                        </div>
+                                    </div>
+                                ` : ''}
+                                
+                                ${result.form_data && Object.keys(result.form_data).length > 0 ? `
+                                    <div class="mb-3">
+                                        <h5 class="text-sm font-medium text-gray-700 mb-1">Form Data:</h5>
+                                        <div class="bg-gray-50 rounded p-2 text-sm">
+                                            <pre class="whitespace-pre-wrap">${JSON.stringify(result.form_data, null, 2)}</pre>
+                                        </div>
+                                    </div>
+                                ` : ''}
+                                
+                                ${result.headers && Object.keys(result.headers).length > 0 ? `
+                                    <div class="mb-3">
+                                        <h5 class="text-sm font-medium text-gray-700 mb-1">Headers:</h5>
+                                        <div class="bg-gray-50 rounded p-2 text-sm">
+                                            <pre class="whitespace-pre-wrap">${JSON.stringify(result.headers, null, 2)}</pre>
+                                        </div>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            showSection(section) {
+                // Hide all sections
+                document.querySelectorAll('.section').forEach(el => el.classList.add('hidden'));
+                
+                // Remove active class from all sidebar items
+                document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
+                
+                // Show selected section
+                document.getElementById(`${section}Section`).classList.remove('hidden');
+                
+                // Add active class to selected sidebar item
+                document.getElementById(`${section}Btn`).classList.add('active');
+                
+                this.currentSection = section;
+            }
+
+            filterEndpoints() {
+                const filter = document.getElementById('endpointFilter').value;
+                const searchTerm = document.getElementById('endpointSearch').value.toLowerCase();
+                
+                const filteredResults = this.results.filter(result => {
+                    const matchesFilter = filter === 'all' || 
+                        (filter === 'GET' && result.endpoint_type === 'GET') ||
+                        (filter === 'POST' && result.endpoint_type === 'POST') ||
+                        (filter === 'JS' && result.endpoint_type === 'JS');
+                    
+                    const matchesSearch = result.url.toLowerCase().includes(searchTerm) ||
+                        (result.description && result.description.toLowerCase().includes(searchTerm));
+                    
+                    return matchesFilter && matchesSearch;
+                });
+                
+                this.displayFilteredEndpoints(filteredResults);
+            }
+
+            searchEndpoints() {
+                this.filterEndpoints();
+            }
+
+            displayFilteredEndpoints(results) {
+                const container = document.getElementById('endpointsList');
+                if (results.length === 0) {
+                    container.innerHTML = '<div class="text-center py-12"><i class="fas fa-search text-4xl text-gray-400 mb-4"></i><p class="text-gray-500">No endpoints match your search</p></div>';
+                    return;
+                }
+
+                container.innerHTML = results.map(result => `
+                    <div class="bg-white border border-gray-200 rounded-lg p-4 card-hover transition-all">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <div class="flex items-center mb-2">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                        result.endpoint_type === 'GET' ? 'bg-blue-100 text-blue-800' :
+                                        result.endpoint_type === 'POST' ? 'bg-green-100 text-green-800' :
+                                        'bg-yellow-100 text-yellow-800'
+                                    }">
+                                        ${result.method || result.endpoint_type}
+                                    </span>
+                                    <span class="ml-2 text-sm text-gray-500">${result.endpoint_type}</span>
+                                </div>
+                                <h4 class="text-lg font-medium text-gray-900 mb-2">${result.url}</h4>
+                                ${result.description ? `<p class="text-sm text-gray-600 mb-3">${result.description}</p>` : ''}
+                                
+                                ${result.parameters && Object.keys(result.parameters).length > 0 ? `
+                                    <div class="mb-3">
+                                        <h5 class="text-sm font-medium text-gray-700 mb-1">Parameters:</h5>
+                                        <div class="bg-gray-50 rounded p-2 text-sm">
+                                            <pre class="whitespace-pre-wrap">${JSON.stringify(result.parameters, null, 2)}</pre>
+                                        </div>
+                                    </div>
+                                ` : ''}
+                                
+                                ${result.form_data && Object.keys(result.form_data).length > 0 ? `
+                                    <div class="mb-3">
+                                        <h5 class="text-sm font-medium text-gray-700 mb-1">Form Data:</h5>
+                                        <div class="bg-gray-50 rounded p-2 text-sm">
+                                            <pre class="whitespace-pre-wrap">${JSON.stringify(result.form_data, null, 2)}</pre>
+                                        </div>
+                                    </div>
+                                ` : ''}
+                                
+                                ${result.headers && Object.keys(result.headers).length > 0 ? `
+                                    <div class="mb-3">
+                                        <h5 class="text-sm font-medium text-gray-700 mb-1">Headers:</h5>
+                                        <div class="bg-gray-50 rounded p-2 text-sm">
+                                            <pre class="whitespace-pre-wrap">${JSON.stringify(result.headers, null, 2)}</pre>
+                                        </div>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            async exportResults() {
+                try {
+                    const response = await this.apiCall(`/scanner/scans/${this.scanId}/export?format=json`);
+                    if (response.ok) {
+                        const blob = await response.blob();
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `scan-${this.scanId}-results.json`;
+                        document.body.appendChild(a);
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                        document.body.removeChild(a);
+                        this.showToast('Results exported successfully', 'success');
+                    } else {
+                        this.showToast('Error exporting results', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error exporting results:', error);
+                    this.showToast('Error exporting results', 'error');
+                }
+            }
+
+            async apiCall(endpoint, options = {}) {
+                const url = '/api' + endpoint;
+                const config = {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + this.token,
+                    },
+                    ...options,
+                };
+
+                return fetch(url, config);
+            }
+
+            showToast(message, type = 'info') {
+                const toast = document.createElement('div');
+                const bgColor = type === 'success' ? 'bg-green-500' : 
+                               type === 'error' ? 'bg-red-500' : 
+                               type === 'warning' ? 'bg-yellow-500' : 'bg-blue-500';
+                
+                toast.className = `${bgColor} text-white px-6 py-3 rounded-lg shadow-lg mb-2 transition-all duration-300 transform translate-x-full`;
+                toast.textContent = message;
+                
+                const container = document.getElementById('toastContainer');
+                container.appendChild(toast);
+                
+                // Animate in
+                setTimeout(() => {
+                    toast.classList.remove('translate-x-full');
+                }, 100);
+                
+                // Remove after 3 seconds
+                setTimeout(() => {
+                    toast.classList.add('translate-x-full');
+                    setTimeout(() => {
+                        if (container.contains(toast)) {
+                            container.removeChild(toast);
+                        }
+                    }, 300);
+                }, 3000);
+            }
+
+            logout() {
+                localStorage.removeItem('vidusec_token');
+                localStorage.removeItem('vidusec_user');
+                window.location.href = '/';
+            }
+        }
+
+        // Initialize scan results when page loads
+        const scanResults = new ScanResults();
+    </script>
+</body>
+</html>

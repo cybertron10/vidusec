@@ -81,6 +81,13 @@ func setupRoutes(r *gin.Engine, apiHandler *api.Handler, authService *auth.Servi
 		})
 	})
 
+	// Scan Results route
+	r.GET("/scan-results/:id", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "scan-results.html", gin.H{
+			"title": "Scan Results",
+		})
+	})
+
 	// API routes
 	api := r.Group("/api")
 	{
