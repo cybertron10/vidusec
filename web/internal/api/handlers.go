@@ -366,6 +366,20 @@ func (h *Handler) RescanScan(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
+// GetScanResultsDebug returns scan results without authentication (for debugging)
+func (h *Handler) GetScanResultsDebug(scanID, userID int) ([]database.ScanResult, error) {
+	log.Printf("GetScanResultsDebug called - UserID: %d, ScanID: %d", userID, scanID)
+	
+	results, err := h.scannerService.GetScanResults(scanID, userID)
+	if err != nil {
+		log.Printf("Error getting scan results (debug): %v", err)
+		return nil, err
+	}
+
+	log.Printf("Found %d results for scan %d (debug)", len(results), scanID)
+	return results, nil
+}
+
 // ExportScanResults exports scan results in various formats
 func (h *Handler) ExportScanResults(c *gin.Context) {
 	userID := c.GetInt("user_id")

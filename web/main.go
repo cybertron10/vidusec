@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 
 	"vidusec/web/internal/api"
 	"vidusec/web/internal/auth"
@@ -133,7 +134,7 @@ func setupRoutes(r *gin.Engine, apiHandler *api.Handler, authService *auth.Servi
 			}
 
 			// Get results without user authentication for debugging
-			results, err := scannerService.GetScanResults(scanID, 1) // Use user ID 1 for debugging
+			results, err := apiHandler.GetScanResultsDebug(scanID, 1) // Use user ID 1 for debugging
 			if err != nil {
 				c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 				return
