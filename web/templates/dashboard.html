@@ -168,7 +168,9 @@
                     this.hideResultsModal();
                 });
 
+                // Close modal when clicking outside the modal content
                 document.getElementById('resultsModal').addEventListener('click', (e) => {
+                    // Check if the click is on the modal backdrop (not on the modal content)
                     if (e.target.id === 'resultsModal') {
                         this.hideResultsModal();
                     }
