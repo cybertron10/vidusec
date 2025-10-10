@@ -269,7 +269,7 @@
                     return;
                 }
 
-                container.innerHTML = this.results.map(result => `
+                container.innerHTML = this.results.map((result, index) => `
                     <div class="bg-white border border-gray-200 rounded-lg p-4 card-hover transition-all">
                         <div class="flex items-start justify-between">
                             <div class="flex-1">
@@ -283,31 +283,50 @@
                                     </span>
                                     <span class="ml-2 text-sm text-gray-500">${result.endpoint_type}</span>
                                 </div>
-                                <h4 class="text-lg font-medium text-gray-900 mb-2">${result.url}</h4>
-                                ${result.description ? `<p class="text-sm text-gray-600 mb-3">${result.description}</p>` : ''}
+                                <h4 class="text-lg font-medium text-gray-900 mb-3">${result.url}</h4>
+                                
+                                <div class="flex flex-wrap gap-2">
+                                    ${result.parameters && Object.keys(result.parameters).length > 0 ? `
+                                        <button onclick="toggleDetails('params-${index}')" class="flex items-center px-3 py-1 bg-blue-50 text-blue-700 rounded-lg text-sm hover:bg-blue-100 transition-colors">
+                                            <i class="fas fa-list mr-2"></i>Parameters
+                                            <i class="fas fa-chevron-down ml-2 text-xs" id="params-icon-${index}"></i>
+                                        </button>
+                                    ` : ''}
+                                    
+                                    ${result.form_data && Object.keys(result.form_data).length > 0 ? `
+                                        <button onclick="toggleDetails('form-${index}')" class="flex items-center px-3 py-1 bg-green-50 text-green-700 rounded-lg text-sm hover:bg-green-100 transition-colors">
+                                            <i class="fas fa-wpforms mr-2"></i>Form Data
+                                            <i class="fas fa-chevron-down ml-2 text-xs" id="form-icon-${index}"></i>
+                                        </button>
+                                    ` : ''}
+                                    
+                                    ${result.headers && Object.keys(result.headers).length > 0 ? `
+                                        <button onclick="toggleDetails('headers-${index}')" class="flex items-center px-3 py-1 bg-gray-50 text-gray-700 rounded-lg text-sm hover:bg-gray-100 transition-colors">
+                                            <i class="fas fa-heading mr-2"></i>Headers
+                                            <i class="fas fa-chevron-down ml-2 text-xs" id="headers-icon-${index}"></i>
+                                        </button>
+                                    ` : ''}
+                                </div>
                                 
                                 ${result.parameters && Object.keys(result.parameters).length > 0 ? `
-                                    <div class="mb-3">
-                                        <h5 class="text-sm font-medium text-gray-700 mb-1">Parameters:</h5>
-                                        <div class="bg-gray-50 rounded p-2 text-sm">
+                                    <div id="params-${index}" class="hidden mt-3">
+                                        <div class="bg-gray-50 rounded p-3 text-sm">
                                             <pre class="whitespace-pre-wrap">${JSON.stringify(result.parameters, null, 2)}</pre>
                                         </div>
                                     </div>
                                 ` : ''}
                                 
                                 ${result.form_data && Object.keys(result.form_data).length > 0 ? `
-                                    <div class="mb-3">
-                                        <h5 class="text-sm font-medium text-gray-700 mb-1">Form Data:</h5>
-                                        <div class="bg-gray-50 rounded p-2 text-sm">
+                                    <div id="form-${index}" class="hidden mt-3">
+                                        <div class="bg-gray-50 rounded p-3 text-sm">
                                             <pre class="whitespace-pre-wrap">${JSON.stringify(result.form_data, null, 2)}</pre>
                                         </div>
                                     </div>
                                 ` : ''}
                                 
                                 ${result.headers && Object.keys(result.headers).length > 0 ? `
-                                    <div class="mb-3">
-                                        <h5 class="text-sm font-medium text-gray-700 mb-1">Headers:</h5>
-                                        <div class="bg-gray-50 rounded p-2 text-sm">
+                                    <div id="headers-${index}" class="hidden mt-3">
+                                        <div class="bg-gray-50 rounded p-3 text-sm">
                                             <pre class="whitespace-pre-wrap">${JSON.stringify(result.headers, null, 2)}</pre>
                                         </div>
                                     </div>
@@ -364,7 +383,7 @@
                     return;
                 }
 
-                container.innerHTML = results.map(result => `
+                container.innerHTML = results.map((result, index) => `
                     <div class="bg-white border border-gray-200 rounded-lg p-4 card-hover transition-all">
                         <div class="flex items-start justify-between">
                             <div class="flex-1">
@@ -378,31 +397,50 @@
                                     </span>
                                     <span class="ml-2 text-sm text-gray-500">${result.endpoint_type}</span>
                                 </div>
-                                <h4 class="text-lg font-medium text-gray-900 mb-2">${result.url}</h4>
-                                ${result.description ? `<p class="text-sm text-gray-600 mb-3">${result.description}</p>` : ''}
+                                <h4 class="text-lg font-medium text-gray-900 mb-3">${result.url}</h4>
+                                
+                                <div class="flex flex-wrap gap-2">
+                                    ${result.parameters && Object.keys(result.parameters).length > 0 ? `
+                                        <button onclick="toggleDetails('params-${index}')" class="flex items-center px-3 py-1 bg-blue-50 text-blue-700 rounded-lg text-sm hover:bg-blue-100 transition-colors">
+                                            <i class="fas fa-list mr-2"></i>Parameters
+                                            <i class="fas fa-chevron-down ml-2 text-xs" id="params-icon-${index}"></i>
+                                        </button>
+                                    ` : ''}
+                                    
+                                    ${result.form_data && Object.keys(result.form_data).length > 0 ? `
+                                        <button onclick="toggleDetails('form-${index}')" class="flex items-center px-3 py-1 bg-green-50 text-green-700 rounded-lg text-sm hover:bg-green-100 transition-colors">
+                                            <i class="fas fa-wpforms mr-2"></i>Form Data
+                                            <i class="fas fa-chevron-down ml-2 text-xs" id="form-icon-${index}"></i>
+                                        </button>
+                                    ` : ''}
+                                    
+                                    ${result.headers && Object.keys(result.headers).length > 0 ? `
+                                        <button onclick="toggleDetails('headers-${index}')" class="flex items-center px-3 py-1 bg-gray-50 text-gray-700 rounded-lg text-sm hover:bg-gray-100 transition-colors">
+                                            <i class="fas fa-heading mr-2"></i>Headers
+                                            <i class="fas fa-chevron-down ml-2 text-xs" id="headers-icon-${index}"></i>
+                                        </button>
+                                    ` : ''}
+                                </div>
                                 
                                 ${result.parameters && Object.keys(result.parameters).length > 0 ? `
-                                    <div class="mb-3">
-                                        <h5 class="text-sm font-medium text-gray-700 mb-1">Parameters:</h5>
-                                        <div class="bg-gray-50 rounded p-2 text-sm">
+                                    <div id="params-${index}" class="hidden mt-3">
+                                        <div class="bg-gray-50 rounded p-3 text-sm">
                                             <pre class="whitespace-pre-wrap">${JSON.stringify(result.parameters, null, 2)}</pre>
                                         </div>
                                     </div>
                                 ` : ''}
                                 
                                 ${result.form_data && Object.keys(result.form_data).length > 0 ? `
-                                    <div class="mb-3">
-                                        <h5 class="text-sm font-medium text-gray-700 mb-1">Form Data:</h5>
-                                        <div class="bg-gray-50 rounded p-2 text-sm">
+                                    <div id="form-${index}" class="hidden mt-3">
+                                        <div class="bg-gray-50 rounded p-3 text-sm">
                                             <pre class="whitespace-pre-wrap">${JSON.stringify(result.form_data, null, 2)}</pre>
                                         </div>
                                     </div>
                                 ` : ''}
                                 
                                 ${result.headers && Object.keys(result.headers).length > 0 ? `
-                                    <div class="mb-3">
-                                        <h5 class="text-sm font-medium text-gray-700 mb-1">Headers:</h5>
-                                        <div class="bg-gray-50 rounded p-2 text-sm">
+                                    <div id="headers-${index}" class="hidden mt-3">
+                                        <div class="bg-gray-50 rounded p-3 text-sm">
                                             <pre class="whitespace-pre-wrap">${JSON.stringify(result.headers, null, 2)}</pre>
                                         </div>
                                     </div>
@@ -481,6 +519,27 @@
                 localStorage.removeItem('vidusec_token');
                 localStorage.removeItem('vidusec_user');
                 window.location.href = '/';
+            }
+        }
+
+        // Global function to toggle details sections
+        function toggleDetails(elementId) {
+            const element = document.getElementById(elementId);
+            const iconId = elementId.replace('params-', 'params-icon-').replace('form-', 'form-icon-').replace('headers-', 'headers-icon-');
+            const icon = document.getElementById(iconId);
+            
+            if (element.classList.contains('hidden')) {
+                element.classList.remove('hidden');
+                if (icon) {
+                    icon.classList.remove('fa-chevron-down');
+                    icon.classList.add('fa-chevron-up');
+                }
+            } else {
+                element.classList.add('hidden');
+                if (icon) {
+                    icon.classList.remove('fa-chevron-up');
+                    icon.classList.add('fa-chevron-down');
+                }
             }
         }
 
