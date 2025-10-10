@@ -2,6 +2,7 @@ package crawler
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -224,12 +225,35 @@ func EnhancedCrawl(startURL string, maxDepth int, maxPages int, customHeaders ma
 				}
 				
 				resp, err := client.Do(req)
-				if err != nil { return }
+				if err != nil { 
+					log.Printf("HTTP request failed for %s: %v", pageURL, err)
+					return 
+				}
 				
 				// Small delay to be respectful to the server
 				time.Sleep(50 * time.Millisecond)
 				status := resp.StatusCode
+				
+				// Log authentication-related errors
+				if status == http.StatusUnauthorized {
+					log.Printf("Authentication failed for %s: 401 Unauthorized", pageURL)
+					resp.Body.Close()
+					return
+				}
+				if status == http.StatusForbidden {
+					log.Printf("Access forbidden for %s: 403 Forbidden", pageURL)
+					resp.Body.Close()
+					return
+				}
 				if status == http.StatusNotFound {
+					log.Printf("Page not found: %s (404)", pageURL)
+					resp.Body.Close()
+					return
+				}
+				
+				// Log other non-200 status codes
+				if status < 200 || status >= 300 {
+					log.Printf("HTTP error for %s: %d", pageURL, status)
 					resp.Body.Close()
 					return
 				}

@@ -99,6 +99,16 @@ func (s *Service) runScan(scanID int, req *ScanRequest) {
 		return
 	}
 
+	// Check if crawler returned any results
+	if len(crawlResult.URLs) == 0 && len(crawlResult.FormFields) == 0 && len(crawlResult.JavaScriptAPIs) == 0 {
+		log.Printf("Crawler returned no results for %s - possible authentication issue", req.TargetURL)
+		s.updateScanStatus(scanID, "failed", 0)
+		return
+	}
+
+	log.Printf("Crawler found %d URLs, %d forms, %d JS APIs for %s", 
+		len(crawlResult.URLs), len(crawlResult.FormFields), len(crawlResult.JavaScriptAPIs), req.TargetURL)
+
 	// Update progress
 	s.updateScanProgress(scanID, 50)
 
