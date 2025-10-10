@@ -336,6 +336,17 @@
                     forms: forms.length
                 });
 
+                // Debug: Show sample of each endpoint type
+                if (getEndpoints.length > 0) {
+                    console.log('Sample GET endpoint:', getEndpoints[0]);
+                }
+                if (postEndpoints.length > 0) {
+                    console.log('Sample POST endpoint:', postEndpoints[0]);
+                }
+                if (jsEndpoints.length > 0) {
+                    console.log('Sample JS endpoint:', jsEndpoints[0]);
+                }
+
                 // Update the left panel counts
                 document.getElementById('endpointsCount').textContent = allEndpoints.length;
                 document.getElementById('javascriptCount').textContent = jsEndpoints.length;
@@ -378,6 +389,13 @@
                 
                 console.log('Filtering endpoints:', { filter, searchTerm, totalResults: this.results.length });
                 console.log('Sample result:', this.results[0]);
+                
+                // Debug: Show endpoint type distribution
+                const typeCounts = this.results.reduce((acc, result) => {
+                    acc[result.endpoint_type] = (acc[result.endpoint_type] || 0) + 1;
+                    return acc;
+                }, {});
+                console.log('Endpoint type distribution:', typeCounts);
                 
                 const filteredResults = this.results.filter(result => {
                     const matchesFilter = filter === 'all' || 
