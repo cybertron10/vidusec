@@ -16,9 +16,10 @@ mkdir -p data/scans
 # Set environment variables
 export PORT=${PORT:-8080}
 
-echo "🌐 Starting server on port $PORT..."
+echo "🌐 Starting server on 0.0.0.0:$PORT..."
 echo "📁 Data directory: $(pwd)/data"
-echo "🔗 Web interface: http://localhost:$PORT"
+echo "🔗 Web interface: http://0.0.0.0:$PORT"
+echo "🌍 External access: http://$(curl -s ifconfig.me):$PORT"
 echo ""
 echo "Press Ctrl+C to stop the server"
 echo ""

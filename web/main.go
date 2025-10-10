@@ -56,8 +56,14 @@ func main() {
 		port = "8080"
 	}
 
-	log.Printf("🚀 ViduSec Web Server starting on port %s", port)
-	log.Fatal(http.ListenAndServe(":"+port, r))
+	host := os.Getenv("HOST")
+	if host == "" {
+		host = "0.0.0.0"
+	}
+
+	address := host + ":" + port
+	log.Printf("🚀 ViduSec Web Server starting on %s", address)
+	log.Fatal(http.ListenAndServe(address, r))
 }
 
 func setupRoutes(r *gin.Engine, apiHandler *api.Handler, authService *auth.Service) {
