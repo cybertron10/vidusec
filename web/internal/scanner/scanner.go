@@ -1,6 +1,7 @@
 package scanner
 
 import (
+	"database/sql"
 	"encoding/json"
 	"log"
 	"os"
@@ -334,7 +335,7 @@ func (s *Service) GetScanResults(scanID, userID int) ([]database.ScanResult, err
 	var results []database.ScanResult
 	for rows.Next() {
 		var result database.ScanResult
-		var paramsJSON, formDataJSON, headersJSON string
+		var paramsJSON, formDataJSON, headersJSON sql.NullString
 		
 		err := rows.Scan(
 			&result.ID, &result.ScanID, &result.EndpointType, &result.URL, &result.Method,
@@ -343,10 +344,24 @@ func (s *Service) GetScanResults(scanID, userID int) ([]database.ScanResult, err
 			return nil, err
 		}
 
-		// Parse JSON fields
-		json.Unmarshal([]byte(paramsJSON), &result.Parameters)
-		json.Unmarshal([]byte(formDataJSON), &result.FormData)
-		json.Unmarshal([]byte(headersJSON), &result.Headers)
+		// Parse JSON fields, handling NULL values
+		if paramsJSON.Valid {
+			json.Unmarshal([]byte(paramsJSON.String), &result.Parameters)
+		} else {
+			result.Parameters = make(map[string]string)
+		}
+		
+		if formDataJSON.Valid {
+			json.Unmarshal([]byte(formDataJSON.String), &result.FormData)
+		} else {
+			result.FormData = make(map[string]string)
+		}
+		
+		if headersJSON.Valid {
+			json.Unmarshal([]byte(headersJSON.String), &result.Headers)
+		} else {
+			result.Headers = make(map[string]string)
+		}
 
 		results = append(results, result)
 	}
