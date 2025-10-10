@@ -257,20 +257,32 @@
             }
 
             async viewResults(scanId) {
+                console.log('Viewing results for scan ID:', scanId);
                 try {
                     const [scanResponse, resultsResponse] = await Promise.all([
                         this.apiCall(`/scanner/scans/${scanId}`),
                         this.apiCall(`/scanner/scans/${scanId}/results`)
                     ]);
 
+                    console.log('Scan response status:', scanResponse.status);
+                    console.log('Results response status:', resultsResponse.status);
+
                     if (scanResponse.ok && resultsResponse.ok) {
                         const scan = await scanResponse.json();
                         const results = await resultsResponse.json();
+                        console.log('Scan data:', scan);
+                        console.log('Results data:', results);
                         this.showResultsModal(scan.scan, results.results);
+                    } else {
+                        console.error('API call failed:', {
+                            scanStatus: scanResponse.status,
+                            resultsStatus: resultsResponse.status
+                        });
+                        this.showToast('Failed to load scan results', 'error');
                     }
                 } catch (error) {
                     console.error('Error loading scan results:', error);
-                    this.showToast('Error loading scan results', 'error');
+                    this.showToast('Error loading scan results: ' + error.message, 'error');
                 }
             }
 
