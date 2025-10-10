@@ -123,6 +123,29 @@ func setupRoutes(r *gin.Engine, apiHandler *api.Handler, authService *auth.Servi
 			})
 		})
 
+		// Debug route to check scan results without authentication
+		api.GET("/debug/scan/:id/results", func(c *gin.Context) {
+			scanIDStr := c.Param("id")
+			scanID, err := strconv.Atoi(scanIDStr)
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid scan ID"})
+				return
+			}
+
+			// Get results without user authentication for debugging
+			results, err := scannerService.GetScanResults(scanID, 1) // Use user ID 1 for debugging
+			if err != nil {
+				c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+				return
+			}
+
+			c.JSON(http.StatusOK, gin.H{
+				"scan_id": scanID,
+				"results": results,
+				"count":   len(results),
+			})
+		})
+
 		// Dashboard routes (protected)
 		dashboard := api.Group("/dashboard")
 		dashboard.Use(middleware.AuthRequired(authService))

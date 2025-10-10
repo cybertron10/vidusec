@@ -259,6 +259,20 @@
             async loadScanResults() {
                 try {
                     console.log('Loading scan results for scan ID:', this.scanId);
+                    
+                    // Try debug endpoint first to see if there's any data
+                    try {
+                        const debugResponse = await fetch(`/api/debug/scan/${this.scanId}/results`);
+                        if (debugResponse.ok) {
+                            const debugData = await debugResponse.json();
+                            console.log('Debug scan results data:', debugData);
+                        } else {
+                            console.log('Debug endpoint failed:', debugResponse.status);
+                        }
+                    } catch (debugError) {
+                        console.log('Debug endpoint error:', debugError);
+                    }
+                    
                     const response = await this.apiCall(`/scanner/scans/${this.scanId}/results`);
                     console.log('Scan results response:', response.status, response.ok);
                     
