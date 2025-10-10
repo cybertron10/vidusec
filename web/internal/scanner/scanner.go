@@ -11,7 +11,6 @@ import (
 
 	"vidusec/web/internal/database"
 	"vidusec/web/internal/crawler"
-	"vidusec/web/internal/scanning"
 )
 
 type Service struct {
@@ -104,7 +103,7 @@ func (s *Service) runScan(scanID int, req *ScanRequest) {
 	s.updateScanProgress(scanID, 50)
 
 	// Create structured scanning data
-	scanData := scanning.CreateScanningData(
+	scanData := crawler.CreateScanningData(
 		crawlResult.URLs,
 		crawlResult.FormFields,
 		crawlResult.JavaScriptAPIs,
@@ -146,7 +145,7 @@ func (s *Service) runScan(scanID int, req *ScanRequest) {
 }
 
 // saveScanResults saves discovered endpoints to database
-func (s *Service) saveScanResults(scanID int, scanData *scanning.ScanningData) error {
+func (s *Service) saveScanResults(scanID int, scanData *crawler.ScanningData) error {
 	// Save GET endpoints
 	for _, endpoint := range scanData.GETEndpoints {
 		paramsJSON, _ := json.Marshal(endpoint.Parameters)
@@ -204,7 +203,7 @@ func (s *Service) saveScanResults(scanID int, scanData *scanning.ScanningData) e
 }
 
 // saveScanFiles saves generated files
-func (s *Service) saveScanFiles(scanID int, scanDir string, scanData *scanning.ScanningData) error {
+func (s *Service) saveScanFiles(scanID int, scanDir string, scanData *crawler.ScanningData) error {
 	// Save JSON data
 	jsonFile := filepath.Join(scanDir, "scan_results.json")
 	err := scanData.SaveToFile(jsonFile)

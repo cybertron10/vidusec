@@ -1,4 +1,4 @@
-package scanning
+package crawler
 
 import (
 	"encoding/json"
@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"vidusec/web/internal/crawler"
+	"vidusec/internal/enhancedCrawler"
 )
 
 // EndpointData represents a complete endpoint for XSS scanning
@@ -39,7 +39,7 @@ type DataSummary struct {
 }
 
 // CreateScanningData creates structured data for XSS scanning
-func CreateScanningData(urls []string, formFields []crawler.FormField, jsAPIs []crawler.JavaScriptAPI, hiddenFields []crawler.HiddenField, postEndpoints []crawler.POSTEndpoint) *ScanningData {
+func CreateScanningData(urls []string, formFields []enhancedCrawler.FormField, jsAPIs []enhancedCrawler.JavaScriptAPI, hiddenFields []enhancedCrawler.HiddenField, postEndpoints []enhancedCrawler.POSTEndpoint) *ScanningData {
 	scanningData := &ScanningData{
 		GETEndpoints:  []EndpointData{},
 		POSTEndpoints: []EndpointData{},
@@ -100,7 +100,7 @@ func createGETEndpoint(url string) EndpointData {
 }
 
 // createPOSTEndpointFromForm creates POST endpoint from form data
-func createPOSTEndpointFromForm(field crawler.FormField, hiddenFields []crawler.HiddenField) EndpointData {
+func createPOSTEndpointFromForm(field enhancedCrawler.FormField, hiddenFields []enhancedCrawler.HiddenField) EndpointData {
 	params := make(map[string]string)
 	formData := make(map[string]string)
 	
@@ -132,7 +132,7 @@ func createPOSTEndpointFromForm(field crawler.FormField, hiddenFields []crawler.
 }
 
 // createJSEndpoint creates JavaScript API endpoint
-func createJSEndpoint(api crawler.JavaScriptAPI) EndpointData {
+func createJSEndpoint(api enhancedCrawler.JavaScriptAPI) EndpointData {
 	params := extractURLParameters(api.Endpoint)
 	
 	return EndpointData{
@@ -150,7 +150,7 @@ func createJSEndpoint(api crawler.JavaScriptAPI) EndpointData {
 }
 
 // createPOSTEndpoint creates POST endpoint from discovered POST endpoints
-func createPOSTEndpoint(postEndpoint crawler.POSTEndpoint, hiddenFields []crawler.HiddenField) EndpointData {
+func createPOSTEndpoint(postEndpoint enhancedCrawler.POSTEndpoint, hiddenFields []enhancedCrawler.HiddenField) EndpointData {
 	params := extractURLParameters(postEndpoint.Endpoint)
 	formData := make(map[string]string)
 	
@@ -350,3 +350,4 @@ func (sd *ScanningData) SaveEndpointsForXSS(filename string) error {
 	
 	return nil
 }
+
