@@ -6,12 +6,10 @@ import (
 	"os"
 	"sort"
 	"strings"
-
-	"vidusec/internal/enhancedCrawler"
 )
 
 // ExtractAllParameters extracts parameters from all sources
-func ExtractAllParameters(result *enhancedCrawler.CrawlResult) []string {
+func ExtractAllParameters(result *CrawlResult) []string {
 	paramSet := make(map[string]bool)
 	
 	// Extract from URLs (existing functionality)

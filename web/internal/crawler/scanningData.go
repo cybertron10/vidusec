@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-
-	"vidusec/internal/enhancedCrawler"
 )
 
 // EndpointData represents a complete endpoint for XSS scanning
@@ -39,7 +37,7 @@ type DataSummary struct {
 }
 
 // CreateScanningData creates structured data for XSS scanning
-func CreateScanningData(urls []string, formFields []enhancedCrawler.FormField, jsAPIs []enhancedCrawler.JavaScriptAPI, hiddenFields []enhancedCrawler.HiddenField, postEndpoints []enhancedCrawler.POSTEndpoint) *ScanningData {
+func CreateScanningData(urls []string, formFields []FormField, jsAPIs []JavaScriptAPI, hiddenFields []HiddenField, postEndpoints []POSTEndpoint) *ScanningData {
 	scanningData := &ScanningData{
 		GETEndpoints:  []EndpointData{},
 		POSTEndpoints: []EndpointData{},
@@ -100,7 +98,7 @@ func createGETEndpoint(url string) EndpointData {
 }
 
 // createPOSTEndpointFromForm creates POST endpoint from form data
-func createPOSTEndpointFromForm(field enhancedCrawler.FormField, hiddenFields []enhancedCrawler.HiddenField) EndpointData {
+func createPOSTEndpointFromForm(field FormField, hiddenFields []HiddenField) EndpointData {
 	params := make(map[string]string)
 	formData := make(map[string]string)
 	
@@ -132,7 +130,7 @@ func createPOSTEndpointFromForm(field enhancedCrawler.FormField, hiddenFields []
 }
 
 // createJSEndpoint creates JavaScript API endpoint
-func createJSEndpoint(api enhancedCrawler.JavaScriptAPI) EndpointData {
+func createJSEndpoint(api JavaScriptAPI) EndpointData {
 	params := extractURLParameters(api.Endpoint)
 	
 	return EndpointData{
@@ -150,7 +148,7 @@ func createJSEndpoint(api enhancedCrawler.JavaScriptAPI) EndpointData {
 }
 
 // createPOSTEndpoint creates POST endpoint from discovered POST endpoints
-func createPOSTEndpoint(postEndpoint enhancedCrawler.POSTEndpoint, hiddenFields []enhancedCrawler.HiddenField) EndpointData {
+func createPOSTEndpoint(postEndpoint POSTEndpoint, hiddenFields []HiddenField) EndpointData {
 	params := extractURLParameters(postEndpoint.Endpoint)
 	formData := make(map[string]string)
 	
