@@ -101,6 +101,7 @@ func setupRoutes(r *gin.Engine, apiHandler *api.Handler, authService *auth.Servi
 			scanner.GET("/scans", apiHandler.GetScans)
 			scanner.GET("/scans/:id", apiHandler.GetScan)
 			scanner.DELETE("/scans/:id", apiHandler.DeleteScan)
+			scanner.POST("/scans/:id/rescan", apiHandler.RescanScan)
 			scanner.GET("/scans/:id/status", apiHandler.GetScanStatus)
 			scanner.GET("/scans/:id/results", apiHandler.GetScanResults)
 			scanner.GET("/scans/:id/export", apiHandler.ExportScanResults)

@@ -402,25 +402,26 @@
             }
 
             async rescan(scanId, targetUrl) {
-                if (!confirm(`Are you sure you want to rescan "${targetUrl}"?`)) {
+                if (!confirm(`Are you sure you want to rescan "${targetUrl}"? This will update the existing scan results.`)) {
                     return;
                 }
 
                 try {
-                    const response = await this.apiCall('/scanner/scan', {
+                    const response = await this.apiCall(`/scanner/scans/${scanId}/rescan`, {
                         method: 'POST',
                         body: JSON.stringify({
-                            target_url: targetUrl,
                             max_depth: 10,
                             max_pages: 20000
                         })
                     });
 
                     if (response.ok) {
-                        const result = await response.json();
-                        this.showToast(`Rescan started successfully! New scan ID: ${result.scan_id}`, 'success');
+                        this.showToast(`Rescan started successfully! Updating scan ID: ${scanId}`, 'success');
                         
-                        // Refresh the scans list to show the new scan
+                        // Add to active scans for real-time tracking
+                        this.activeScans.add(scanId);
+                        
+                        // Refresh the scans list to show updated status
                         this.loadScans();
                         this.loadDashboardData();
                     } else {

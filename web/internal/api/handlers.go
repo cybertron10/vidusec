@@ -307,6 +307,58 @@ func (h *Handler) GetScanResults(c *gin.Context) {
 	})
 }
 
+// RescanScan restarts a scan with the same parameters
+func (h *Handler) RescanScan(c *gin.Context) {
+	userID := c.GetInt("user_id")
+	scanIDStr := c.Param("id")
+	
+	log.Printf("RescanScan called - UserID: %d, ScanID: %s", userID, scanIDStr)
+	
+	scanID, err := strconv.Atoi(scanIDStr)
+	if err != nil {
+		log.Printf("Invalid scan ID for rescan: %s", scanIDStr)
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid scan ID",
+		})
+		return
+	}
+
+	// Parse request body for scan parameters
+	var req struct {
+		MaxDepth int `json:"max_depth"`
+		MaxPages int `json:"max_pages"`
+	}
+	
+	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Printf("Error parsing rescan request: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid request body",
+		})
+		return
+	}
+
+	// Set defaults
+	if req.MaxDepth == 0 {
+		req.MaxDepth = 10
+	}
+	if req.MaxPages == 0 {
+		req.MaxPages = 20000
+	}
+
+	log.Printf("Starting rescan for scan %d, user %d", scanID, userID)
+	response, err := h.scannerService.RescanScan(scanID, userID, &req)
+	if err != nil {
+		log.Printf("Error starting rescan: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to start rescan",
+		})
+		return
+	}
+
+	log.Printf("Rescan started successfully for scan %d", scanID)
+	c.JSON(http.StatusOK, response)
+}
+
 // ExportScanResults exports scan results in various formats
 func (h *Handler) ExportScanResults(c *gin.Context) {
 	userID := c.GetInt("user_id")

@@ -421,3 +421,74 @@ func (s *Service) GetDashboardStats(userID int) (*database.DashboardStats, error
 
 	return stats, nil
 }
+
+// RescanScan restarts a scan with new parameters, updating the existing scan
+func (s *Service) RescanScan(scanID, userID int, req *StartScanRequest) (*StartScanResponse, error) {
+	// First verify the scan exists and belongs to the user
+	scan, err := s.GetScan(scanID, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	log.Printf("Rescanning scan %d for user %d, target: %s", scanID, userID, scan.TargetURL)
+
+	// Reset scan status and progress
+	_, err = s.db.Exec(`
+		UPDATE scans SET 
+			status = 'pending', 
+			progress = 0, 
+			max_depth = ?, 
+			max_pages = ?,
+			started_at = NULL,
+			completed_at = NULL
+		WHERE id = ? AND user_id = ?`,
+		req.MaxDepth, req.MaxPages, scanID, userID)
+	if err != nil {
+		log.Printf("Error resetting scan status: %v", err)
+		return nil, err
+	}
+
+	// Delete existing scan results
+	_, err = s.db.Exec(`DELETE FROM scan_results WHERE scan_id = ?`, scanID)
+	if err != nil {
+		log.Printf("Error deleting existing scan results: %v", err)
+		return nil, err
+	}
+
+	// Delete existing scan files
+	scanDir := filepath.Join("data", "scans", strconv.Itoa(scanID))
+	os.RemoveAll(scanDir)
+
+	// Start the scan in a goroutine
+	go func() {
+		log.Printf("Starting rescan goroutine for scan %d", scanID)
+		s.updateScanStatus(scanID, "running", 0)
+		
+		// Perform the actual scan
+		scanData, err := s.performScan(scan.TargetURL, req.MaxDepth, req.MaxPages)
+		if err != nil {
+			log.Printf("Rescan failed for scan %d: %v", scanID, err)
+			s.updateScanStatus(scanID, "failed", 0)
+			return
+		}
+
+		// Save results
+		if err := s.saveScanResults(scanID, scanData); err != nil {
+			log.Printf("Error saving rescan results for scan %d: %v", scanID, err)
+			s.updateScanStatus(scanID, "failed", 0)
+			return
+		}
+
+		// Mark as completed
+		s.updateScanStatus(scanID, "completed", 100)
+		log.Printf("Rescan completed successfully for scan %d", scanID)
+	}()
+
+	return &StartScanResponse{
+		ScanID:     scanID,
+		Message:    "Rescan started successfully",
+		TargetURL:  scan.TargetURL,
+		MaxDepth:   req.MaxDepth,
+		MaxPages:   req.MaxPages,
+	}, nil
+}
