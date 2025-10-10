@@ -74,6 +74,13 @@ func setupRoutes(r *gin.Engine, apiHandler *api.Handler, authService *auth.Servi
 		})
 	})
 
+	// Dashboard route
+	r.GET("/dashboard", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "dashboard.html", gin.H{
+			"title": "ViduSec Dashboard",
+		})
+	})
+
 	// API routes
 	api := r.Group("/api")
 	{

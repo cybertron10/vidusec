@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ViduSec Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .card-hover {
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation -->
+    <nav class="gradient-bg shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <h1 class="text-white text-xl font-bold">
+                            <i class="fas fa-shield-alt mr-2"></i>ViduSec Dashboard
+                        </h1>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span id="userInfo" class="text-white"></span>
+                    <button id="newScanBtn" class="bg-white text-purple-600 hover:bg-gray-100 px-4 py-2 rounded-md text-sm font-medium">
+                        <i class="fas fa-plus mr-1"></i>New Scan
+                    </button>
+                    <button id="logoutBtn" class="text-white hover:text-gray-200 px-3 py-2 rounded-md text-sm font-medium">
+                        <i class="fas fa-sign-out-alt mr-1"></i>Logout
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Dashboard Content -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white p-6 rounded-lg shadow-lg">
+                <div class="flex items-center">
+                    <div class="p-2 bg-blue-100 rounded-lg">
+                        <i class="fas fa-search text-blue-600 text-xl"></i>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-600">Total Scans</p>
+                        <p id="totalScans" class="text-2xl font-bold text-gray-900">0</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white p-6 rounded-lg shadow-lg">
+                <div class="flex items-center">
+                    <div class="p-2 bg-green-100 rounded-lg">
+                        <i class="fas fa-check-circle text-green-600 text-xl"></i>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-600">Completed</p>
+                        <p id="completedScans" class="text-2xl font-bold text-gray-900">0</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white p-6 rounded-lg shadow-lg">
+                <div class="flex items-center">
+                    <div class="p-2 bg-yellow-100 rounded-lg">
+                        <i class="fas fa-spinner text-yellow-600 text-xl"></i>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-600">Running</p>
+                        <p id="runningScans" class="text-2xl font-bold text-gray-900">0</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white p-6 rounded-lg shadow-lg">
+                <div class="flex items-center">
+                    <div class="p-2 bg-purple-100 rounded-lg">
+                        <i class="fas fa-link text-purple-600 text-xl"></i>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-600">Endpoints</p>
+                        <p id="totalEndpoints" class="text-2xl font-bold text-gray-900">0</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Scans -->
+        <div class="bg-white rounded-lg shadow-lg">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h2 class="text-lg font-semibold text-gray-900">Recent Scans</h2>
+            </div>
+            <div class="p-6">
+                <div id="scansList" class="space-y-4">
+                    <!-- Scans will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scan Results Modal -->
+    <div id="resultsModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full p-6 max-h-screen overflow-y-auto">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-900">Scan Results</h2>
+                    <button id="closeResultsModal" class="text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                
+                <div id="scanDetails" class="mb-6">
+                    <!-- Scan details will be loaded here -->
+                </div>
+                
+                <div id="resultsContent">
+                    <!-- Results will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toastContainer" class="fixed top-4 right-4 z-50"></div>
+
+    <script>
+        class Dashboard {
+            constructor() {
+                this.token = localStorage.getItem('vidusec_token');
+                this.user = JSON.parse(localStorage.getItem('vidusec_user') || 'null');
+                this.init();
+            }
+
+            init() {
+                if (!this.token) {
+                    window.location.href = '/';
+                    return;
+                }
+
+                this.setupEventListeners();
+                this.updateUserInfo();
+                this.loadDashboardData();
+                this.loadScans();
+            }
+
+            setupEventListeners() {
+                document.getElementById('newScanBtn').addEventListener('click', () => {
+                    window.location.href = '/';
+                });
+
+                document.getElementById('logoutBtn').addEventListener('click', () => {
+                    this.logout();
+                });
+
+                document.getElementById('closeResultsModal').addEventListener('click', () => {
+                    this.hideResultsModal();
+                });
+
+                document.getElementById('resultsModal').addEventListener('click', (e) => {
+                    if (e.target.id === 'resultsModal') {
+                        this.hideResultsModal();
+                    }
+                });
+            }
+
+            updateUserInfo() {
+                if (this.user) {
+                    document.getElementById('userInfo').textContent = `Welcome, ${this.user.username}`;
+                }
+            }
+
+            async loadDashboardData() {
+                try {
+                    const response = await this.apiCall('/dashboard/stats');
+                    if (response.ok) {
+                        const stats = await response.json();
+                        document.getElementById('totalScans').textContent = stats.total_scans;
+                        document.getElementById('completedScans').textContent = stats.completed_scans;
+                        document.getElementById('runningScans').textContent = stats.running_scans;
+                        document.getElementById('totalEndpoints').textContent = stats.total_endpoints;
+                    }
+                } catch (error) {
+                    console.error('Error loading dashboard data:', error);
+                }
+            }
+
+            async loadScans() {
+                try {
+                    const response = await this.apiCall('/scanner/scans');
+                    if (response.ok) {
+                        const data = await response.json();
+                        this.displayScans(data.scans);
+                    }
+                } catch (error) {
+                    console.error('Error loading scans:', error);
+                }
+            }
+
+            displayScans(scans) {
+                const scansList = document.getElementById('scansList');
+                if (scans.length === 0) {
+                    scansList.innerHTML = '<p class="text-gray-500 text-center py-8">No scans found. Start your first scan!</p>';
+                    return;
+                }
+
+                scansList.innerHTML = scans.map(scan => `
+                    <div class="border border-gray-200 rounded-lg p-4 card-hover">
+                        <div class="flex justify-between items-start">
+                            <div class="flex-1">
+                                <h3 class="text-lg font-semibold text-gray-900">${scan.target_url}</h3>
+                                <p class="text-sm text-gray-600">Scan ID: ${scan.id}</p>
+                                <p class="text-sm text-gray-600">Created: ${new Date(scan.created_at).toLocaleString()}</p>
+                                <div class="mt-2">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                        scan.status === 'completed' ? 'bg-green-100 text-green-800' :
+                                        scan.status === 'running' ? 'bg-yellow-100 text-yellow-800' :
+                                        scan.status === 'failed' ? 'bg-red-100 text-red-800' :
+                                        'bg-gray-100 text-gray-800'
+                                    }">
+                                        ${scan.status}
+                                    </span>
+                                    ${scan.status === 'running' ? `
+                                        <div class="mt-2">
+                                            <div class="bg-gray-200 rounded-full h-2">
+                                                <div class="bg-blue-600 h-2 rounded-full" style="width: ${scan.progress}%"></div>
+                                            </div>
+                                            <p class="text-xs text-gray-600 mt-1">${scan.progress}% complete</p>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                            <div class="flex space-x-2">
+                                ${scan.status === 'completed' ? `
+                                    <button onclick="dashboard.viewResults(${scan.id})" class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">
+                                        <i class="fas fa-eye mr-1"></i>View Results
+                                    </button>
+                                ` : ''}
+                                <button onclick="dashboard.deleteScan(${scan.id})" class="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700">
+                                    <i class="fas fa-trash mr-1"></i>Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            async viewResults(scanId) {
+                try {
+                    const [scanResponse, resultsResponse] = await Promise.all([
+                        this.apiCall(`/scanner/scans/${scanId}`),
+                        this.apiCall(`/scanner/scans/${scanId}/results`)
+                    ]);
+
+                    if (scanResponse.ok && resultsResponse.ok) {
+                        const scan = await scanResponse.json();
+                        const results = await resultsResponse.json();
+                        this.showResultsModal(scan.scan, results.results);
+                    }
+                } catch (error) {
+                    console.error('Error loading scan results:', error);
+                    this.showToast('Error loading scan results', 'error');
+                }
+            }
+
+            showResultsModal(scan, results) {
+                document.getElementById('scanDetails').innerHTML = `
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <h3 class="font-semibold text-gray-900">Scan Details</h3>
+                        <div class="mt-2 grid grid-cols-2 gap-4 text-sm">
+                            <div><strong>Target URL:</strong> ${scan.target_url}</div>
+                            <div><strong>Status:</strong> ${scan.status}</div>
+                            <div><strong>Max Depth:</strong> ${scan.max_depth}</div>
+                            <div><strong>Max Pages:</strong> ${scan.max_pages}</div>
+                            <div><strong>Started:</strong> ${scan.started_at ? new Date(scan.started_at).toLocaleString() : 'N/A'}</div>
+                            <div><strong>Completed:</strong> ${scan.completed_at ? new Date(scan.completed_at).toLocaleString() : 'N/A'}</div>
+                        </div>
+                    </div>
+                `;
+
+                if (results.length === 0) {
+                    document.getElementById('resultsContent').innerHTML = '<p class="text-gray-500 text-center py-8">No results found for this scan.</p>';
+                } else {
+                    document.getElementById('resultsContent').innerHTML = `
+                        <h3 class="font-semibold text-gray-900 mb-4">Discovered Endpoints (${results.length})</h3>
+                        <div class="space-y-4">
+                            ${results.map(result => `
+                                <div class="border border-gray-200 rounded-lg p-4">
+                                    <div class="flex justify-between items-start mb-2">
+                                        <div>
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                                result.endpoint_type === 'get' ? 'bg-blue-100 text-blue-800' :
+                                                result.endpoint_type === 'post' ? 'bg-green-100 text-green-800' :
+                                                'bg-purple-100 text-purple-800'
+                                            }">
+                                                ${result.method} - ${result.endpoint_type}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="text-sm">
+                                        <div class="font-medium text-gray-900">${result.url}</div>
+                                        <div class="text-gray-600 mt-1">${result.description}</div>
+                                        ${Object.keys(result.parameters).length > 0 ? `
+                                            <div class="mt-2">
+                                                <strong>Parameters:</strong>
+                                                <pre class="bg-gray-100 p-2 rounded text-xs mt-1">${JSON.stringify(result.parameters, null, 2)}</pre>
+                                            </div>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                }
+
+                document.getElementById('resultsModal').classList.remove('hidden');
+            }
+
+            hideResultsModal() {
+                document.getElementById('resultsModal').classList.add('hidden');
+            }
+
+            async deleteScan(scanId) {
+                if (!confirm('Are you sure you want to delete this scan?')) {
+                    return;
+                }
+
+                try {
+                    const response = await this.apiCall(`/scanner/scans/${scanId}`, {
+                        method: 'DELETE'
+                    });
+
+                    if (response.ok) {
+                        this.showToast('Scan deleted successfully', 'success');
+                        this.loadScans();
+                        this.loadDashboardData();
+                    } else {
+                        this.showToast('Error deleting scan', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error deleting scan:', error);
+                    this.showToast('Error deleting scan', 'error');
+                }
+            }
+
+            logout() {
+                localStorage.removeItem('vidusec_token');
+                localStorage.removeItem('vidusec_user');
+                window.location.href = '/';
+            }
+
+            async apiCall(endpoint, options = {}) {
+                const url = '/api' + endpoint;
+                const config = {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${this.token}`,
+                        ...options.headers
+                    },
+                    ...options
+                };
+
+                return fetch(url, config);
+            }
+
+            showToast(message, type = 'info') {
+                const toastContainer = document.getElementById('toastContainer');
+                const toast = document.createElement('div');
+                
+                const colors = {
+                    success: 'bg-green-500',
+                    error: 'bg-red-500',
+                    warning: 'bg-yellow-500',
+                    info: 'bg-blue-500'
+                };
+
+                const icons = {
+                    success: 'fas fa-check-circle',
+                    error: 'fas fa-exclamation-circle',
+                    warning: 'fas fa-exclamation-triangle',
+                    info: 'fas fa-info-circle'
+                };
+
+                toast.className = `${colors[type]} text-white px-6 py-3 rounded-lg shadow-lg mb-2 flex items-center max-w-sm`;
+                toast.innerHTML = `
+                    <i class="${icons[type]} mr-2"></i>
+                    <span>${message}</span>
+                    <button class="ml-4 text-white hover:text-gray-200" onclick="this.parentElement.remove()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                `;
+
+                toastContainer.appendChild(toast);
+
+                setTimeout(() => {
+                    if (toast.parentElement) {
+                        toast.remove();
+                    }
+                }, 5000);
+            }
+        }
+
+        // Initialize dashboard when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            window.dashboard = new Dashboard();
+        });
+    </script>
+</body>
+</html>
