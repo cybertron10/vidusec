@@ -248,9 +248,8 @@ class ViduSecApp {
 
     // Navigation Methods
     goToDashboard() {
-        // For now, just show a message
-        // In a full SPA, this would navigate to the dashboard
-        this.showToast('Dashboard functionality coming soon!', 'info');
+        // Navigate to the dashboard page
+        window.location.href = '/dashboard';
     }
 
     scrollToFeatures() {
