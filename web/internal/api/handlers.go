@@ -158,12 +158,14 @@ func (h *Handler) GetScans(c *gin.Context) {
 
 	scans, err := h.scannerService.GetScans(userID, limit, offset)
 	if err != nil {
+		log.Printf("Error retrieving scans for user %d: %v", userID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to retrieve scans",
 		})
 		return
 	}
 
+	log.Printf("Retrieved %d scans for user %d: %v", len(scans), userID, scans)
 	c.JSON(http.StatusOK, gin.H{
 		"scans": scans,
 		"pagination": gin.H{
@@ -206,20 +208,36 @@ func (h *Handler) DeleteScan(c *gin.Context) {
 	scanIDStr := c.Param("id")
 	scanID, err := strconv.Atoi(scanIDStr)
 	if err != nil {
+		log.Printf("Invalid scan ID in delete request: %s", scanIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Invalid scan ID",
 		})
 		return
 	}
 
-	err = h.scannerService.DeleteScan(scanID, userID)
+	log.Printf("Delete scan request - UserID: %d, ScanID: %d", userID, scanID)
+	
+	// First check if scan exists
+	_, err = h.scannerService.GetScan(scanID, userID)
 	if err != nil {
+		log.Printf("Scan not found for deletion - UserID: %d, ScanID: %d, Error: %v", userID, scanID, err)
 		c.JSON(http.StatusNotFound, gin.H{
 			"error": "Scan not found",
 		})
 		return
 	}
 
+	// Delete the scan
+	err = h.scannerService.DeleteScan(scanID, userID)
+	if err != nil {
+		log.Printf("Error deleting scan - UserID: %d, ScanID: %d, Error: %v", userID, scanID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to delete scan",
+		})
+		return
+	}
+
+	log.Printf("Successfully deleted scan - UserID: %d, ScanID: %d", userID, scanID)
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Scan deleted successfully",
 	})

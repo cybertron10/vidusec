@@ -366,8 +366,14 @@
                         this.showToast('Scan deleted successfully', 'success');
                         this.loadScans();
                         this.loadDashboardData();
+                    } else if (response.status === 404) {
+                        this.showToast('Scan not found - it may have been already deleted', 'warning');
+                        // Refresh the scans list to remove the non-existent scan
+                        this.loadScans();
+                        this.loadDashboardData();
                     } else {
-                        this.showToast('Error deleting scan', 'error');
+                        const errorData = await response.json().catch(() => ({}));
+                        this.showToast(errorData.error || 'Error deleting scan', 'error');
                     }
                 } catch (error) {
                     console.error('Error deleting scan:', error);
