@@ -459,7 +459,12 @@ func (s *Service) RescanScan(scanID, userID int, req *ScanRequest) (*ScanRespons
 	scanDir := filepath.Join("data", "scans", strconv.Itoa(scanID))
 	os.RemoveAll(scanDir)
 
+	// Set the target URL in the request for the rescan
+	req.TargetURL = scan.TargetURL
+	log.Printf("Rescan request prepared - URL: %s, MaxDepth: %d, MaxPages: %d", req.TargetURL, req.MaxDepth, req.MaxPages)
+
 	// Start the scan in a goroutine using the existing runScan method
+	log.Printf("Starting rescan goroutine for scan %d", scanID)
 	go s.runScan(scanID, req)
 
 	return &ScanResponse{

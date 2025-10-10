@@ -406,6 +406,8 @@
                     return;
                 }
 
+                console.log(`Starting rescan for scan ID: ${scanId}, URL: ${targetUrl}`);
+                
                 try {
                     const response = await this.apiCall(`/scanner/scans/${scanId}/rescan`, {
                         method: 'POST',
@@ -415,7 +417,11 @@
                         })
                     });
 
+                    console.log('Rescan API response:', response.status, response.ok);
+
                     if (response.ok) {
+                        const result = await response.json();
+                        console.log('Rescan result:', result);
                         this.showToast(`Rescan started successfully! Updating scan ID: ${scanId}`, 'success');
                         
                         // Add to active scans for real-time tracking
@@ -426,6 +432,7 @@
                         this.loadDashboardData();
                     } else {
                         const errorData = await response.json().catch(() => ({}));
+                        console.error('Rescan error response:', errorData);
                         this.showToast(errorData.error || 'Error starting rescan', 'error');
                     }
                 } catch (error) {
