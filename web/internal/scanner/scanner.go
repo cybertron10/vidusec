@@ -1,9 +1,7 @@
 package scanner
 
 import (
-	"context"
 	"encoding/json"
-	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -142,7 +140,7 @@ func (s *Service) runScan(scanID int, req *ScanRequest) {
 }
 
 // saveScanResults saves discovered endpoints to database
-func (s *Service) saveScanResults(scanID int, scanData *scanningData.ScanningData) error {
+func (s *Service) saveScanResults(scanID int, scanData *scanning.ScanningData) error {
 	// Save GET endpoints
 	for _, endpoint := range scanData.GETEndpoints {
 		paramsJSON, _ := json.Marshal(endpoint.Parameters)
@@ -200,7 +198,7 @@ func (s *Service) saveScanResults(scanID int, scanData *scanningData.ScanningDat
 }
 
 // saveScanFiles saves generated files
-func (s *Service) saveScanFiles(scanID int, scanDir string, scanData *scanningData.ScanningData) error {
+func (s *Service) saveScanFiles(scanID int, scanDir string, scanData *scanning.ScanningData) error {
 	// Save JSON data
 	jsonFile := filepath.Join(scanDir, "scan_results.json")
 	err := scanData.SaveToFile(jsonFile)
