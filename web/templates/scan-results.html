@@ -141,13 +141,13 @@
                     <div class="flex justify-between items-center mb-6">
                         <h3 class="text-xl font-semibold text-gray-900">Discovered Endpoints</h3>
                         <div class="flex space-x-2">
-                            <select id="endpointFilter" onchange="filterEndpoints()" class="border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                            <select id="endpointFilter" class="border border-gray-300 rounded-lg px-3 py-2 text-sm">
                                 <option value="all">All Endpoints</option>
                                 <option value="GET">GET Requests</option>
                                 <option value="POST">POST Requests</option>
                                 <option value="JS">JavaScript APIs</option>
                             </select>
-                            <input type="text" id="endpointSearch" onkeyup="searchEndpoints()" placeholder="Search endpoints..." class="border border-gray-300 rounded-lg px-3 py-2 text-sm w-64">
+                            <input type="text" id="endpointSearch" placeholder="Search endpoints..." class="border border-gray-300 rounded-lg px-3 py-2 text-sm w-64">
                         </div>
                     </div>
                     <div id="endpointsList" class="space-y-4">
@@ -262,13 +262,19 @@
 
             async loadScanResults() {
                 try {
+                    console.log('Loading scan results for scan ID:', this.scanId);
                     const response = await this.apiCall(`/scanner/scans/${this.scanId}/results`);
+                    console.log('Scan results response:', response.status, response.ok);
+                    
                     if (response.ok) {
                         const data = await response.json();
+                        console.log('Scan results data:', data);
                         this.results = data.results || [];
+                        console.log('Results array:', this.results);
                         this.updateCounts();
                         this.displayEndpoints();
                     } else {
+                        console.error('Failed to load scan results:', response.status);
                         this.showToast('Error loading scan results', 'error');
                     }
                 } catch (error) {
@@ -298,9 +304,19 @@
             }
 
             updateCounts() {
+                console.log('Updating counts with results:', this.results);
+                console.log('Results length:', this.results.length);
+                
                 const endpoints = this.results.filter(r => r.endpoint_type === 'GET' || r.endpoint_type === 'POST');
                 const jsEndpoints = this.results.filter(r => r.endpoint_type === 'JS');
                 const forms = this.results.filter(r => r.endpoint_type === 'POST' && r.form_data && Object.keys(r.form_data).length > 0);
+
+                console.log('Endpoint counts:', {
+                    total: this.results.length,
+                    endpoints: endpoints.length,
+                    jsEndpoints: jsEndpoints.length,
+                    forms: forms.length
+                });
 
                 document.getElementById('endpointCount').textContent = endpoints.length;
                 document.getElementById('endpointsCount').textContent = endpoints.length;
@@ -335,6 +351,7 @@
                 const searchTerm = document.getElementById('endpointSearch').value.toLowerCase();
                 
                 console.log('Filtering endpoints:', { filter, searchTerm, totalResults: this.results.length });
+                console.log('Sample result:', this.results[0]);
                 
                 const filteredResults = this.results.filter(result => {
                     const matchesFilter = filter === 'all' || 
@@ -346,6 +363,7 @@
                         result.url.toLowerCase().includes(searchTerm) ||
                         (result.description && result.description.toLowerCase().includes(searchTerm));
                     
+                    console.log(`Result ${result.url}: filter=${matchesFilter}, search=${matchesSearch}, type=${result.endpoint_type}`);
                     return matchesFilter && matchesSearch;
                 });
                 
