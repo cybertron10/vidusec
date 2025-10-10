@@ -47,7 +47,7 @@
     <!-- Dashboard Content -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <!-- Stats Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <div class="bg-white p-6 rounded-lg shadow-lg">
                 <div class="flex items-center">
                     <div class="p-2 bg-blue-100 rounded-lg">
@@ -80,18 +80,6 @@
                     <div class="ml-4">
                         <p class="text-sm font-medium text-gray-600">Running</p>
                         <p id="runningScans" class="text-2xl font-bold text-gray-900">0</p>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="bg-white p-6 rounded-lg shadow-lg">
-                <div class="flex items-center">
-                    <div class="p-2 bg-purple-100 rounded-lg">
-                        <i class="fas fa-link text-purple-600 text-xl"></i>
-                    </div>
-                    <div class="ml-4">
-                        <p class="text-sm font-medium text-gray-600">Endpoints</p>
-                        <p id="totalEndpoints" class="text-2xl font-bold text-gray-900">0</p>
                     </div>
                 </div>
             </div>
@@ -207,7 +195,6 @@
                         document.getElementById('totalScans').textContent = stats.total_scans;
                         document.getElementById('completedScans').textContent = stats.completed_scans;
                         document.getElementById('runningScans').textContent = stats.running_scans;
-                        document.getElementById('totalEndpoints').textContent = stats.total_endpoints;
                     }
                 } catch (error) {
                     console.error('Error loading dashboard data:', error);
