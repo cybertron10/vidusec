@@ -45,7 +45,7 @@
         }
     </style>
 </head>
-<body class="bg-gray-50">
+<body class="bg-gray-50 overflow-hidden">
     <!-- Navigation Header -->
     <nav class="bg-gradient-to-r from-blue-600 to-purple-700 shadow-lg">
         <div class="max-w-7xl mx-auto px-6 lg:px-8">
@@ -90,10 +90,6 @@
                         <div id="scanProgress" class="mt-1 text-lg font-semibold text-gray-900">0%</div>
                     </div>
                     <div class="text-center">
-                        <div class="text-sm font-medium text-gray-500">Endpoints Found</div>
-                        <div id="endpointCount" class="mt-1 text-lg font-semibold text-gray-900">0</div>
-                    </div>
-                    <div class="text-center">
                         <div class="text-sm font-medium text-gray-500">Scan Date</div>
                         <div id="scanDate" class="mt-1 text-sm text-gray-900"></div>
                     </div>
@@ -103,8 +99,8 @@
     </div>
 
     <!-- Main Content Area -->
-    <div class="max-w-7xl mx-auto px-6 lg:px-8 py-6">
-        <div class="flex gap-6 h-[calc(100vh-200px)]">
+    <div class="max-w-7xl mx-auto px-6 lg:px-8 py-4">
+        <div class="flex gap-6 h-[calc(100vh-180px)]">
             <!-- Left Sidebar (Stable) -->
             <div class="w-64 bg-white rounded-lg shadow-sm border border-gray-200 flex-shrink-0">
                 <div class="p-6">
@@ -307,19 +303,24 @@
                 console.log('Updating counts with results:', this.results);
                 console.log('Results length:', this.results.length);
                 
-                const endpoints = this.results.filter(r => r.endpoint_type === 'GET' || r.endpoint_type === 'POST');
+                // Count all endpoints (GET, POST, JS)
+                const allEndpoints = this.results.filter(r => r.endpoint_type === 'GET' || r.endpoint_type === 'POST' || r.endpoint_type === 'JS');
+                const getEndpoints = this.results.filter(r => r.endpoint_type === 'GET');
+                const postEndpoints = this.results.filter(r => r.endpoint_type === 'POST');
                 const jsEndpoints = this.results.filter(r => r.endpoint_type === 'JS');
                 const forms = this.results.filter(r => r.endpoint_type === 'POST' && r.form_data && Object.keys(r.form_data).length > 0);
 
                 console.log('Endpoint counts:', {
                     total: this.results.length,
-                    endpoints: endpoints.length,
+                    allEndpoints: allEndpoints.length,
+                    getEndpoints: getEndpoints.length,
+                    postEndpoints: postEndpoints.length,
                     jsEndpoints: jsEndpoints.length,
                     forms: forms.length
                 });
 
-                document.getElementById('endpointCount').textContent = endpoints.length;
-                document.getElementById('endpointsCount').textContent = endpoints.length;
+                // Update the left panel counts
+                document.getElementById('endpointsCount').textContent = allEndpoints.length;
                 document.getElementById('javascriptCount').textContent = jsEndpoints.length;
                 document.getElementById('formsCount').textContent = forms.length;
                 document.getElementById('vulnerabilitiesCount').textContent = '0'; // Placeholder
@@ -347,8 +348,16 @@
             }
 
             filterEndpoints() {
-                const filter = document.getElementById('endpointFilter').value;
-                const searchTerm = document.getElementById('endpointSearch').value.toLowerCase();
+                const filterSelect = document.getElementById('endpointFilter');
+                const searchInput = document.getElementById('endpointSearch');
+                
+                if (!filterSelect || !searchInput) {
+                    console.error('Filter elements not found');
+                    return;
+                }
+                
+                const filter = filterSelect.value;
+                const searchTerm = searchInput.value.toLowerCase();
                 
                 console.log('Filtering endpoints:', { filter, searchTerm, totalResults: this.results.length });
                 console.log('Sample result:', this.results[0]);
