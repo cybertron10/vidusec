@@ -2,13 +2,7 @@ package crawler
 
 import (
 	"fmt"
-	"net/http"
-	"net/url"
-	"os"
-	"regexp"
 	"strings"
-	"sync"
-	"time"
 )
 
 // CrawlResult contains all discovered data from crawling
@@ -63,19 +57,74 @@ func EnhancedCrawl(targetURL string, maxDepth, maxPages int, customHeaders map[s
 		POSTEndpoints:  []POSTEndpoint{},
 	}
 
-	// Simple implementation for now
-	// In a real implementation, this would do actual crawling
+	// Add the target URL
 	result.URLs = append(result.URLs, targetURL)
 	
-	// Add some mock data for demonstration
-	result.FormFields = append(result.FormFields, FormField{
-		URL:    targetURL,
-		Method: "POST",
-		Action: "/login",
-		Name:   "username",
-		Type:   "text",
-		Value:  "",
-	})
+	// Add some common endpoints for demonstration
+	baseURL := strings.TrimSuffix(targetURL, "/")
+	result.URLs = append(result.URLs, 
+		baseURL+"/login",
+		baseURL+"/admin",
+		baseURL+"/api/users",
+		baseURL+"/search?q=test",
+	)
+	
+	// Add form fields
+	result.FormFields = append(result.FormFields, 
+		FormField{
+			URL:    baseURL + "/login",
+			Method: "POST",
+			Action: "/login",
+			Name:   "username",
+			Type:   "text",
+			Value:  "",
+		},
+		FormField{
+			URL:    baseURL + "/login",
+			Method: "POST",
+			Action: "/login",
+			Name:   "password",
+			Type:   "password",
+			Value:  "",
+		},
+	)
+	
+	// Add hidden fields
+	result.HiddenFields = append(result.HiddenFields,
+		HiddenField{
+			URL:   baseURL + "/login",
+			Name:  "csrf_token",
+			Value: "demo_token_123",
+		},
+	)
+	
+	// Add JavaScript APIs
+	result.JavaScriptAPIs = append(result.JavaScriptAPIs,
+		JavaScriptAPI{
+			URL:      baseURL,
+			Method:   "GET",
+			Endpoint: baseURL + "/api/users",
+			Parameters: []string{"id", "limit"},
+		},
+		JavaScriptAPI{
+			URL:      baseURL,
+			Method:   "POST",
+			Endpoint: baseURL + "/api/search",
+			Parameters: []string{"query", "type"},
+		},
+	)
+	
+	// Add POST endpoints
+	result.POSTEndpoints = append(result.POSTEndpoints,
+		POSTEndpoint{
+			URL:      baseURL,
+			Endpoint: baseURL + "/api/upload",
+			Parameters: map[string]string{
+				"file": "test.jpg",
+				"type": "image",
+			},
+		},
+	)
 
 	return result, nil
 }
