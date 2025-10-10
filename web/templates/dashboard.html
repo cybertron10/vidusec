@@ -113,7 +113,7 @@
     <!-- Scan Results Modal -->
     <div id="resultsModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
         <div class="flex items-center justify-center min-h-screen p-4">
-            <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full p-6 max-h-screen overflow-y-auto">
+            <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full p-6 max-h-screen overflow-y-auto" onclick="event.stopPropagation()">
                 <div class="flex justify-between items-center mb-6">
                     <h2 class="text-2xl font-bold text-gray-900">Scan Results</h2>
                     <button id="closeResultsModal" class="text-gray-400 hover:text-gray-600">
@@ -171,7 +171,7 @@
                 // Close modal when clicking outside the modal content
                 document.getElementById('resultsModal').addEventListener('click', (e) => {
                     // Check if the click is on the modal backdrop (not on the modal content)
-                    if (e.target.id === 'resultsModal') {
+                    if (e.target === e.currentTarget) {
                         this.hideResultsModal();
                     }
                 });
