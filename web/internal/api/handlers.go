@@ -381,6 +381,43 @@ func (h *Handler) GetScanResultsDebug(scanID, userID int) ([]database.ScanResult
 	return results, nil
 }
 
+// GetAllScansDebug returns all scans from database (for debugging)
+func (h *Handler) GetAllScansDebug() ([]gin.H, error) {
+	// Get all scans from database for debugging
+	rows, err := h.scannerService.GetAllScansDebug()
+	if err != nil {
+		return nil, err
+	}
+
+	var scans []gin.H
+	for _, scan := range rows {
+		scans = append(scans, gin.H{
+			"id":         scan.ID,
+			"user_id":    scan.UserID,
+			"target_url": scan.TargetURL,
+			"status":     scan.Status,
+			"progress":   scan.Progress,
+			"created_at": scan.CreatedAt,
+		})
+	}
+
+	return scans, nil
+}
+
+// GetScanCountDebug returns scan results count and sample data (for debugging)
+func (h *Handler) GetScanCountDebug(scanID int) (gin.H, error) {
+	countData, err := h.scannerService.GetScanCountDebug(scanID)
+	if err != nil {
+		return nil, err
+	}
+
+	return gin.H{
+		"scan_id":        scanID,
+		"total_count":    countData["total_count"],
+		"sample_results": countData["sample_results"],
+	}, nil
+}
+
 // ExportScanResults exports scan results in various formats
 func (h *Handler) ExportScanResults(c *gin.Context) {
 	userID := c.GetInt("user_id")

@@ -149,32 +149,11 @@ func setupRoutes(r *gin.Engine, apiHandler *api.Handler, authService *auth.Servi
 
 		// Debug route to check all scans in database
 		api.GET("/debug/scans", func(c *gin.Context) {
-			// Get all scans from database for debugging
-			rows, err := db.Query("SELECT id, user_id, target_url, status, progress, created_at FROM scans ORDER BY created_at DESC LIMIT 10")
+			scans, err := apiHandler.GetAllScansDebug()
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				return
 			}
-			defer rows.Close()
-
-			var scans []gin.H
-			for rows.Next() {
-				var id, userID, progress int
-				var targetURL, status, createdAt string
-				err := rows.Scan(&id, &userID, &targetURL, &status, &progress, &createdAt)
-				if err != nil {
-					continue
-				}
-				scans = append(scans, gin.H{
-					"id":         id,
-					"user_id":    userID,
-					"target_url": targetURL,
-					"status":     status,
-					"progress":   progress,
-					"created_at": createdAt,
-				})
-			}
-
 			c.JSON(http.StatusOK, gin.H{
 				"scans": scans,
 				"count": len(scans),
@@ -190,43 +169,13 @@ func setupRoutes(r *gin.Engine, apiHandler *api.Handler, authService *auth.Servi
 				return
 			}
 
-			// Count scan results in database
-			var count int
-			err = db.QueryRow("SELECT COUNT(*) FROM scan_results WHERE scan_id = ?", scanID).Scan(&count)
+			countData, err := apiHandler.GetScanCountDebug(scanID)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				return
 			}
 
-			// Get sample results
-			rows, err := db.Query("SELECT id, endpoint_type, url, method FROM scan_results WHERE scan_id = ? LIMIT 5", scanID)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				return
-			}
-			defer rows.Close()
-
-			var sampleResults []gin.H
-			for rows.Next() {
-				var id int
-				var endpointType, url, method string
-				err := rows.Scan(&id, &endpointType, &url, &method)
-				if err != nil {
-					continue
-				}
-				sampleResults = append(sampleResults, gin.H{
-					"id":            id,
-					"endpoint_type": endpointType,
-					"url":           url,
-					"method":        method,
-				})
-			}
-
-			c.JSON(http.StatusOK, gin.H{
-				"scan_id":        scanID,
-				"total_count":    count,
-				"sample_results": sampleResults,
-			})
+			c.JSON(http.StatusOK, countData)
 		})
 
 		// Dashboard routes (protected)
