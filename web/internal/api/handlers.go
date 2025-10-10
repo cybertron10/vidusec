@@ -1,6 +1,7 @@
 package api
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 
@@ -257,24 +258,30 @@ func (h *Handler) GetScanStatus(c *gin.Context) {
 // GetScanResults returns the results of a specific scan
 func (h *Handler) GetScanResults(c *gin.Context) {
 	userID := c.GetInt("user_id")
-
 	scanIDStr := c.Param("id")
+	
+	log.Printf("GetScanResults called - UserID: %d, ScanID: %s", userID, scanIDStr)
+	
 	scanID, err := strconv.Atoi(scanIDStr)
 	if err != nil {
+		log.Printf("Invalid scan ID: %s", scanIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Invalid scan ID",
 		})
 		return
 	}
 
+	log.Printf("Getting scan results for scan %d, user %d", scanID, userID)
 	results, err := h.scannerService.GetScanResults(scanID, userID)
 	if err != nil {
+		log.Printf("Error getting scan results: %v", err)
 		c.JSON(http.StatusNotFound, gin.H{
 			"error": "Scan not found",
 		})
 		return
 	}
 
+	log.Printf("Found %d results for scan %d", len(results), scanID)
 	c.JSON(http.StatusOK, gin.H{
 		"scan_id": scanID,
 		"results": results,

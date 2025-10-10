@@ -115,12 +115,17 @@ func (s *Service) runScan(scanID int, req *ScanRequest) {
 	s.updateScanProgress(scanID, 70)
 
 	// Save results to database
+	log.Printf("Saving scan results for scan %d: %d GET, %d POST, %d JS endpoints", 
+		scanID, len(scanData.GETEndpoints), len(scanData.POSTEndpoints), len(scanData.JSEndpoints))
+	
 	err = s.saveScanResults(scanID, scanData)
 	if err != nil {
 		log.Printf("Error saving scan results: %v", err)
 		s.updateScanStatus(scanID, "failed", 0)
 		return
 	}
+	
+	log.Printf("Successfully saved scan results for scan %d", scanID)
 
 	// Update progress
 	s.updateScanProgress(scanID, 90)
