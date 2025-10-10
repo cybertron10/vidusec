@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"vidusec/web/internal/database"
-	"vidusec/internal/enhancedCrawler"
-	"vidusec/internal/scanningData"
+	"vidusec/web/internal/crawler"
+	"vidusec/web/internal/scanning"
 )
 
 type Service struct {
@@ -89,7 +89,7 @@ func (s *Service) runScan(scanID int, req *ScanRequest) {
 	// Run enhanced crawler
 	log.Printf("Starting scan %d for URL: %s", scanID, req.TargetURL)
 	
-	crawlResult, err := enhancedCrawler.EnhancedCrawl(
+	crawlResult, err := crawler.EnhancedCrawl(
 		req.TargetURL, 
 		req.MaxDepth, 
 		req.MaxPages, 
@@ -105,7 +105,7 @@ func (s *Service) runScan(scanID int, req *ScanRequest) {
 	s.updateScanProgress(scanID, 50)
 
 	// Create structured scanning data
-	scanData := scanningData.CreateScanningData(
+	scanData := scanning.CreateScanningData(
 		crawlResult.URLs,
 		crawlResult.FormFields,
 		crawlResult.JavaScriptAPIs,
