@@ -106,6 +106,15 @@ func setupRoutes(r *gin.Engine, apiHandler *api.Handler, authService *auth.Servi
 			scanner.GET("/scans/:id/export", apiHandler.ExportScanResults)
 		}
 
+		// Test route without authentication (temporary)
+		api.GET("/test/results/:id", func(c *gin.Context) {
+			scanIDStr := c.Param("id")
+			c.JSON(http.StatusOK, gin.H{
+				"message": "Test route working",
+				"scan_id": scanIDStr,
+			})
+		})
+
 		// Dashboard routes (protected)
 		dashboard := api.Group("/dashboard")
 		dashboard.Use(middleware.AuthRequired(authService))
