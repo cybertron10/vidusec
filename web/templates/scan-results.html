@@ -136,15 +136,18 @@
                 <div id="endpointsSection" class="section">
                     <div class="flex justify-between items-center mb-6">
                         <h3 class="text-xl font-semibold text-gray-900">Discovered Endpoints</h3>
-                        <div class="flex space-x-2">
-                            <select id="endpointFilter" class="border border-gray-300 rounded-lg px-3 py-2 text-sm">
-                                <option value="all">All Endpoints</option>
-                                <option value="GET">GET Requests</option>
-                                <option value="POST">POST Requests</option>
-                                <option value="JS">JavaScript APIs</option>
-                            </select>
-                            <input type="text" id="endpointSearch" placeholder="Search endpoints..." class="border border-gray-300 rounded-lg px-3 py-2 text-sm w-64">
-                        </div>
+                           <div class="flex space-x-2">
+                               <select id="endpointFilter" class="border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                                   <option value="all">All Endpoints</option>
+                                   <option value="GET">GET Requests</option>
+                                   <option value="POST">POST Requests</option>
+                                   <option value="JS">JavaScript APIs</option>
+                               </select>
+                               <input type="text" id="endpointSearch" placeholder="Search endpoints..." class="border border-gray-300 rounded-lg px-3 py-2 text-sm w-64">
+                               <button onclick="scanResults.debugData()" class="bg-red-500 text-white px-3 py-2 rounded text-sm hover:bg-red-600">
+                                   <i class="fas fa-bug mr-1"></i>Debug
+                               </button>
+                           </div>
                     </div>
                     <div id="endpointsList" class="space-y-4">
                         <!-- Endpoints will be loaded here -->
@@ -536,6 +539,43 @@
                         }
                     }, 300);
                 }, 3000);
+            }
+
+            async debugData() {
+                console.log('=== DEBUG DATA ===');
+                console.log('Scan ID:', this.scanId);
+                console.log('Current results:', this.results);
+                console.log('Results length:', this.results.length);
+                
+                // Test debug endpoints
+                try {
+                    // Test scan count endpoint
+                    const countResponse = await fetch(`/api/debug/scan/${this.scanId}/count`);
+                    if (countResponse.ok) {
+                        const countData = await countResponse.json();
+                        console.log('Database count data:', countData);
+                    }
+                    
+                    // Test all scans endpoint
+                    const scansResponse = await fetch('/api/debug/scans');
+                    if (scansResponse.ok) {
+                        const scansData = await scansResponse.json();
+                        console.log('All scans data:', scansData);
+                    }
+                    
+                    // Test scan results endpoint
+                    const resultsResponse = await fetch(`/api/debug/scan/${this.scanId}/results`);
+                    if (resultsResponse.ok) {
+                        const resultsData = await resultsResponse.json();
+                        console.log('Debug results data:', resultsData);
+                    }
+                    
+                } catch (error) {
+                    console.error('Debug endpoint error:', error);
+                }
+                
+                console.log('=== END DEBUG ===');
+                this.showToast('Debug data logged to console', 'info');
             }
 
             logout() {
