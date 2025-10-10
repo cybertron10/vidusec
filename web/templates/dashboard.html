@@ -100,7 +100,13 @@
         <!-- Recent Scans -->
         <div class="bg-white rounded-lg shadow-lg">
             <div class="px-6 py-4 border-b border-gray-200">
-                <h2 class="text-lg font-semibold text-gray-900">Recent Scans</h2>
+                <div class="flex justify-between items-center">
+                    <h2 class="text-lg font-semibold text-gray-900">Recent Scans</h2>
+                    <div id="pollingIndicator" class="hidden flex items-center text-sm text-gray-500">
+                        <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                        <span>Updating...</span>
+                    </div>
+                </div>
             </div>
             <div class="p-6">
                 <div id="scansList" class="space-y-4">
@@ -140,6 +146,8 @@
             constructor() {
                 this.token = localStorage.getItem('vidusec_token');
                 this.user = JSON.parse(localStorage.getItem('vidusec_user') || 'null');
+                this.activeScans = new Set(); // Track scans that are currently running
+                this.pollingInterval = null;
                 this.init();
             }
 
@@ -153,6 +161,7 @@
                 this.updateUserInfo();
                 this.loadDashboardData();
                 this.loadScans();
+                this.startPolling();
             }
 
             setupEventListeners() {
@@ -224,8 +233,16 @@
                     return;
                 }
 
+                // Update active scans tracking
+                this.activeScans.clear();
+                scans.forEach(scan => {
+                    if (scan.status === 'running' || scan.status === 'pending') {
+                        this.activeScans.add(scan.id);
+                    }
+                });
+
                 scansList.innerHTML = scans.map(scan => `
-                    <div class="border border-gray-200 rounded-lg p-4 card-hover">
+                    <div class="border border-gray-200 rounded-lg p-4 card-hover" id="scan-${scan.id}">
                         <div class="flex justify-between items-start">
                             <div class="flex-1">
                                 <h3 class="text-lg font-semibold text-gray-900">${scan.target_url}</h3>
@@ -237,20 +254,20 @@
                                         scan.status === 'running' ? 'bg-yellow-100 text-yellow-800' :
                                         scan.status === 'failed' ? 'bg-red-100 text-red-800' :
                                         'bg-gray-100 text-gray-800'
-                                    }">
+                                    }" id="status-${scan.id}">
                                         ${scan.status}
                                     </span>
-                                    ${scan.status === 'running' ? `
+                                    ${scan.status === 'running' || scan.status === 'pending' ? `
                                         <div class="mt-2">
                                             <div class="bg-gray-200 rounded-full h-2">
-                                                <div class="bg-blue-600 h-2 rounded-full" style="width: ${scan.progress}%"></div>
+                                                <div class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: ${scan.progress}%" id="progress-bar-${scan.id}"></div>
                                             </div>
-                                            <p class="text-xs text-gray-600 mt-1">${scan.progress}% complete</p>
+                                            <p class="text-xs text-gray-600 mt-1" id="progress-text-${scan.id}">${scan.progress}% complete</p>
                                         </div>
                                     ` : ''}
                                 </div>
                             </div>
-                            <div class="flex space-x-2">
+                            <div class="flex space-x-2" id="actions-${scan.id}">
                                 ${scan.status === 'completed' ? `
                                     <button onclick="dashboard.viewResults(${scan.id})" class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">
                                         <i class="fas fa-eye mr-1"></i>View Results
@@ -384,7 +401,133 @@
             logout() {
                 localStorage.removeItem('vidusec_token');
                 localStorage.removeItem('vidusec_user');
+                this.stopPolling();
                 window.location.href = '/';
+            }
+
+            // Real-time polling methods
+            startPolling() {
+                // Poll every 2 seconds for active scans
+                this.pollingInterval = setInterval(() => {
+                    if (this.activeScans.size > 0) {
+                        this.pollActiveScans();
+                    }
+                }, 2000);
+            }
+
+            stopPolling() {
+                if (this.pollingInterval) {
+                    clearInterval(this.pollingInterval);
+                    this.pollingInterval = null;
+                }
+            }
+
+            async pollActiveScans() {
+                const activeScanIds = Array.from(this.activeScans);
+                if (activeScanIds.length === 0) {
+                    this.hidePollingIndicator();
+                    return;
+                }
+
+                this.showPollingIndicator();
+                
+                try {
+                    // Poll each active scan for status updates
+                    const promises = activeScanIds.map(scanId => this.getScanStatus(scanId));
+                    const results = await Promise.allSettled(promises);
+
+                    results.forEach((result, index) => {
+                        if (result.status === 'fulfilled' && result.value) {
+                            this.updateScanInUI(result.value);
+                        }
+                    });
+                } catch (error) {
+                    console.error('Error polling active scans:', error);
+                } finally {
+                    // Hide indicator after a short delay
+                    setTimeout(() => this.hidePollingIndicator(), 500);
+                }
+            }
+
+            showPollingIndicator() {
+                const indicator = document.getElementById('pollingIndicator');
+                if (indicator) {
+                    indicator.classList.remove('hidden');
+                }
+            }
+
+            hidePollingIndicator() {
+                const indicator = document.getElementById('pollingIndicator');
+                if (indicator) {
+                    indicator.classList.add('hidden');
+                }
+            }
+
+            async getScanStatus(scanId) {
+                try {
+                    const response = await this.apiCall(`/scanner/scans/${scanId}/status`);
+                    if (response.ok) {
+                        return await response.json();
+                    }
+                } catch (error) {
+                    console.error(`Error getting status for scan ${scanId}:`, error);
+                }
+                return null;
+            }
+
+            updateScanInUI(scanData) {
+                const scanId = scanData.scan_id;
+                
+                // Update status badge
+                const statusElement = document.getElementById(`status-${scanId}`);
+                if (statusElement) {
+                    statusElement.textContent = scanData.status;
+                    statusElement.className = `inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        scanData.status === 'completed' ? 'bg-green-100 text-green-800' :
+                        scanData.status === 'running' ? 'bg-yellow-100 text-yellow-800' :
+                        scanData.status === 'failed' ? 'bg-red-100 text-red-800' :
+                        'bg-gray-100 text-gray-800'
+                    }`;
+                }
+
+                // Update progress bar and text
+                const progressBar = document.getElementById(`progress-bar-${scanId}`);
+                const progressText = document.getElementById(`progress-text-${scanId}`);
+                
+                if (progressBar && progressText) {
+                    progressBar.style.width = `${scanData.progress}%`;
+                    progressText.textContent = `${scanData.progress}% complete`;
+                }
+
+                // Update actions section
+                const actionsElement = document.getElementById(`actions-${scanId}`);
+                if (actionsElement) {
+                    if (scanData.status === 'completed') {
+                        actionsElement.innerHTML = `
+                            <button onclick="dashboard.viewResults(${scanId})" class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">
+                                <i class="fas fa-eye mr-1"></i>View Results
+                            </button>
+                            <button onclick="dashboard.deleteScan(${scanId})" class="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700">
+                                <i class="fas fa-trash mr-1"></i>Delete
+                            </button>
+                        `;
+                        // Remove from active scans
+                        this.activeScans.delete(scanId);
+                    } else if (scanData.status === 'failed') {
+                        actionsElement.innerHTML = `
+                            <button onclick="dashboard.deleteScan(${scanId})" class="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700">
+                                <i class="fas fa-trash mr-1"></i>Delete
+                            </button>
+                        `;
+                        // Remove from active scans
+                        this.activeScans.delete(scanId);
+                    }
+                }
+
+                // If scan completed or failed, refresh dashboard stats
+                if (scanData.status === 'completed' || scanData.status === 'failed') {
+                    this.loadDashboardData();
+                }
             }
 
             async apiCall(endpoint, options = {}) {
