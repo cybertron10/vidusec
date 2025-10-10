@@ -348,19 +348,19 @@ func (s *Service) GetScanResults(scanID, userID int) ([]database.ScanResult, err
 		if paramsJSON.Valid {
 			json.Unmarshal([]byte(paramsJSON.String), &result.Parameters)
 		} else {
-			result.Parameters = make(map[string]string)
+			result.Parameters = make(map[string]interface{})
 		}
 		
 		if formDataJSON.Valid {
 			json.Unmarshal([]byte(formDataJSON.String), &result.FormData)
 		} else {
-			result.FormData = make(map[string]string)
+			result.FormData = make(map[string]interface{})
 		}
 		
 		if headersJSON.Valid {
 			json.Unmarshal([]byte(headersJSON.String), &result.Headers)
 		} else {
-			result.Headers = make(map[string]string)
+			result.Headers = make(map[string]interface{})
 		}
 
 		results = append(results, result)
