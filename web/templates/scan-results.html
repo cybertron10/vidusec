@@ -47,31 +47,26 @@
 </head>
 <body class="bg-gray-50">
     <!-- Navigation Header -->
-    <nav class="bg-white shadow-lg border-b border-gray-200">
+    <nav class="bg-gradient-to-r from-blue-600 to-purple-700 shadow-lg">
         <div class="max-w-7xl mx-auto px-6 lg:px-8">
             <div class="flex justify-between items-center h-16">
                 <div class="flex items-center">
-                    <a href="/dashboard" class="text-gray-600 hover:text-gray-900 mr-4 transition-colors">
+                    <a href="/dashboard" class="text-white hover:text-gray-200 mr-4 transition-colors">
                         <i class="fas fa-arrow-left text-lg"></i>
                     </a>
                     <div class="flex items-center">
-                        <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center mr-3">
+                        <div class="w-8 h-8 bg-white bg-opacity-20 rounded-lg flex items-center justify-center mr-3">
                             <i class="fas fa-shield-alt text-white text-sm"></i>
                         </div>
-                        <div>
-                            <h1 class="text-xl font-bold text-gray-900">ViduSec</h1>
-                            <p class="text-sm text-gray-500">Scan Results</p>
-                        </div>
+                        <h1 class="text-xl font-bold text-white">ViduSec Scan Results</h1>
                     </div>
                 </div>
                 <div class="flex items-center space-x-4">
-                    <div class="text-right">
-                        <p id="userInfo" class="text-sm font-medium text-gray-900"></p>
-                        <p class="text-xs text-gray-500">Security Scanner</p>
-                    </div>
-                    <button onclick="logout()" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors font-medium">
-                        <i class="fas fa-sign-out-alt mr-2"></i>Logout
+                    <span id="userInfo" class="text-white font-medium"></span>
+                    <button onclick="logout()" class="text-white hover:text-gray-200 transition-colors">
+                        <i class="fas fa-sign-out-alt text-lg"></i>
                     </button>
+                    <span class="text-white">Logout</span>
                 </div>
             </div>
         </div>
@@ -214,6 +209,27 @@
                 this.updateUserInfo();
                 this.loadScanData();
                 this.loadScanResults();
+                this.setupEventListeners();
+            }
+
+            setupEventListeners() {
+                // Add event listeners for filter and search
+                const filterSelect = document.getElementById('endpointFilter');
+                const searchInput = document.getElementById('endpointSearch');
+                
+                if (filterSelect) {
+                    filterSelect.addEventListener('change', () => {
+                        console.log('Filter changed');
+                        this.filterEndpoints();
+                    });
+                }
+                
+                if (searchInput) {
+                    searchInput.addEventListener('input', () => {
+                        console.log('Search input changed');
+                        this.searchEndpoints();
+                    });
+                }
             }
 
             getScanIdFromUrl() {
@@ -294,78 +310,8 @@
             }
 
             displayEndpoints() {
-                const container = document.getElementById('endpointsList');
-                if (this.results.length === 0) {
-                    container.innerHTML = '<div class="text-center py-12"><i class="fas fa-link text-4xl text-gray-400 mb-4"></i><p class="text-gray-500">No endpoints found</p></div>';
-                    return;
-                }
-
-                container.innerHTML = this.results.map((result, index) => `
-                    <div class="bg-white border border-gray-200 rounded-lg p-4 card-hover transition-all">
-                        <div class="flex items-start justify-between">
-                            <div class="flex-1">
-                                <div class="flex items-center mb-2">
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                        result.endpoint_type === 'GET' ? 'bg-blue-100 text-blue-800' :
-                                        result.endpoint_type === 'POST' ? 'bg-green-100 text-green-800' :
-                                        'bg-yellow-100 text-yellow-800'
-                                    }">
-                                        ${result.method || result.endpoint_type}
-                                    </span>
-                                    <span class="ml-2 text-sm text-gray-500">${result.endpoint_type}</span>
-                                </div>
-                                <h4 class="text-lg font-medium text-gray-900 mb-3">${result.url}</h4>
-                                
-                                <div class="flex flex-wrap gap-2">
-                                    ${result.parameters && Object.keys(result.parameters).length > 0 ? `
-                                        <button onclick="toggleDetails('params-${index}')" class="flex items-center px-3 py-1 bg-blue-50 text-blue-700 rounded-lg text-sm hover:bg-blue-100 transition-colors">
-                                            <i class="fas fa-list mr-2"></i>Parameters
-                                            <i class="fas fa-chevron-down ml-2 text-xs" id="params-icon-${index}"></i>
-                                        </button>
-                                    ` : ''}
-                                    
-                                    ${result.form_data && Object.keys(result.form_data).length > 0 ? `
-                                        <button onclick="toggleDetails('form-${index}')" class="flex items-center px-3 py-1 bg-green-50 text-green-700 rounded-lg text-sm hover:bg-green-100 transition-colors">
-                                            <i class="fas fa-wpforms mr-2"></i>Form Data
-                                            <i class="fas fa-chevron-down ml-2 text-xs" id="form-icon-${index}"></i>
-                                        </button>
-                                    ` : ''}
-                                    
-                                    ${result.headers && Object.keys(result.headers).length > 0 ? `
-                                        <button onclick="toggleDetails('headers-${index}')" class="flex items-center px-3 py-1 bg-gray-50 text-gray-700 rounded-lg text-sm hover:bg-gray-100 transition-colors">
-                                            <i class="fas fa-heading mr-2"></i>Headers
-                                            <i class="fas fa-chevron-down ml-2 text-xs" id="headers-icon-${index}"></i>
-                                        </button>
-                                    ` : ''}
-                                </div>
-                                
-                                ${result.parameters && Object.keys(result.parameters).length > 0 ? `
-                                    <div id="params-${index}" class="hidden mt-3">
-                                        <div class="bg-gray-50 rounded p-3 text-sm">
-                                            <pre class="whitespace-pre-wrap">${JSON.stringify(result.parameters, null, 2)}</pre>
-                                        </div>
-                                    </div>
-                                ` : ''}
-                                
-                                ${result.form_data && Object.keys(result.form_data).length > 0 ? `
-                                    <div id="form-${index}" class="hidden mt-3">
-                                        <div class="bg-gray-50 rounded p-3 text-sm">
-                                            <pre class="whitespace-pre-wrap">${JSON.stringify(result.form_data, null, 2)}</pre>
-                                        </div>
-                                    </div>
-                                ` : ''}
-                                
-                                ${result.headers && Object.keys(result.headers).length > 0 ? `
-                                    <div id="headers-${index}" class="hidden mt-3">
-                                        <div class="bg-gray-50 rounded p-3 text-sm">
-                                            <pre class="whitespace-pre-wrap">${JSON.stringify(result.headers, null, 2)}</pre>
-                                        </div>
-                                    </div>
-                                ` : ''}
-                            </div>
-                        </div>
-                    </div>
-                `).join('');
+                // Use the same filtering logic as the filter function
+                this.filterEndpoints();
             }
 
             showSection(section) {
@@ -388,22 +334,27 @@
                 const filter = document.getElementById('endpointFilter').value;
                 const searchTerm = document.getElementById('endpointSearch').value.toLowerCase();
                 
+                console.log('Filtering endpoints:', { filter, searchTerm, totalResults: this.results.length });
+                
                 const filteredResults = this.results.filter(result => {
                     const matchesFilter = filter === 'all' || 
                         (filter === 'GET' && result.endpoint_type === 'GET') ||
                         (filter === 'POST' && result.endpoint_type === 'POST') ||
                         (filter === 'JS' && result.endpoint_type === 'JS');
                     
-                    const matchesSearch = result.url.toLowerCase().includes(searchTerm) ||
+                    const matchesSearch = searchTerm === '' || 
+                        result.url.toLowerCase().includes(searchTerm) ||
                         (result.description && result.description.toLowerCase().includes(searchTerm));
                     
                     return matchesFilter && matchesSearch;
                 });
                 
+                console.log('Filtered results:', filteredResults.length);
                 this.displayFilteredEndpoints(filteredResults);
             }
 
             searchEndpoints() {
+                console.log('Search triggered');
                 this.filterEndpoints();
             }
 
