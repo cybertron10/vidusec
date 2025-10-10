@@ -44,8 +44,8 @@ func main() {
 	r.Use(cors.New(config))
 
 	// Static files
-	r.Static("/static", "./web/static")
-	r.LoadHTMLGlob("web/templates/*")
+	r.Static("/static", "./static")
+	r.LoadHTMLGlob("templates/*")
 
 	// Routes
 	setupRoutes(r, apiHandler, authService)
