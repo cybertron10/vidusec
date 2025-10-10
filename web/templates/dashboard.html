@@ -112,8 +112,8 @@
 
     <!-- Scan Results Modal -->
     <div id="resultsModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
-        <div class="flex items-center justify-center min-h-screen p-4">
-            <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full p-6 max-h-screen overflow-y-auto" onclick="event.stopPropagation()">
+        <div id="modalBackdrop" class="flex items-center justify-center min-h-screen p-4">
+            <div id="modalContent" class="bg-white rounded-lg shadow-xl max-w-4xl w-full p-6 max-h-screen overflow-y-auto">
                 <div class="flex justify-between items-center mb-6">
                     <h2 class="text-2xl font-bold text-gray-900">Scan Results</h2>
                     <button id="closeResultsModal" class="text-gray-400 hover:text-gray-600">
@@ -170,10 +170,17 @@
 
                 // Close modal when clicking outside the modal content
                 document.getElementById('resultsModal').addEventListener('click', (e) => {
+                    console.log('Modal clicked, target:', e.target.id, 'currentTarget:', e.currentTarget.id);
                     // Check if the click is on the modal backdrop (not on the modal content)
-                    if (e.target === e.currentTarget) {
+                    if (e.target.id === 'resultsModal' || e.target.id === 'modalBackdrop') {
+                        console.log('Closing modal - clicked on backdrop');
                         this.hideResultsModal();
                     }
+                });
+
+                // Prevent clicks on modal content from closing the modal
+                document.getElementById('modalContent').addEventListener('click', (e) => {
+                    e.stopPropagation();
                 });
             }
 
