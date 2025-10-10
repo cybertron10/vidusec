@@ -345,8 +345,15 @@ func (h *Handler) RescanScan(c *gin.Context) {
 		req.MaxPages = 20000
 	}
 
+	// Create ScanRequest struct
+	scanReq := &scanner.ScanRequest{
+		MaxDepth: req.MaxDepth,
+		MaxPages: req.MaxPages,
+		Headers:  make(map[string]string), // Empty headers for rescan
+	}
+
 	log.Printf("Starting rescan for scan %d, user %d", scanID, userID)
-	response, err := h.scannerService.RescanScan(scanID, userID, &req)
+	response, err := h.scannerService.RescanScan(scanID, userID, scanReq)
 	if err != nil {
 		log.Printf("Error starting rescan: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{

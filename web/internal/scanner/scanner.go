@@ -423,7 +423,7 @@ func (s *Service) GetDashboardStats(userID int) (*database.DashboardStats, error
 }
 
 // RescanScan restarts a scan with new parameters, updating the existing scan
-func (s *Service) RescanScan(scanID, userID int, req *StartScanRequest) (*StartScanResponse, error) {
+func (s *Service) RescanScan(scanID, userID int, req *ScanRequest) (*ScanResponse, error) {
 	// First verify the scan exists and belongs to the user
 	scan, err := s.GetScan(scanID, userID)
 	if err != nil {
@@ -459,36 +459,12 @@ func (s *Service) RescanScan(scanID, userID int, req *StartScanRequest) (*StartS
 	scanDir := filepath.Join("data", "scans", strconv.Itoa(scanID))
 	os.RemoveAll(scanDir)
 
-	// Start the scan in a goroutine
-	go func() {
-		log.Printf("Starting rescan goroutine for scan %d", scanID)
-		s.updateScanStatus(scanID, "running", 0)
-		
-		// Perform the actual scan
-		scanData, err := s.performScan(scan.TargetURL, req.MaxDepth, req.MaxPages)
-		if err != nil {
-			log.Printf("Rescan failed for scan %d: %v", scanID, err)
-			s.updateScanStatus(scanID, "failed", 0)
-			return
-		}
+	// Start the scan in a goroutine using the existing runScan method
+	go s.runScan(scanID, req)
 
-		// Save results
-		if err := s.saveScanResults(scanID, scanData); err != nil {
-			log.Printf("Error saving rescan results for scan %d: %v", scanID, err)
-			s.updateScanStatus(scanID, "failed", 0)
-			return
-		}
-
-		// Mark as completed
-		s.updateScanStatus(scanID, "completed", 100)
-		log.Printf("Rescan completed successfully for scan %d", scanID)
-	}()
-
-	return &StartScanResponse{
-		ScanID:     scanID,
-		Message:    "Rescan started successfully",
-		TargetURL:  scan.TargetURL,
-		MaxDepth:   req.MaxDepth,
-		MaxPages:   req.MaxPages,
+	return &ScanResponse{
+		ScanID:  scanID,
+		Status:  "pending",
+		Message: "Rescan started successfully",
 	}, nil
 }
