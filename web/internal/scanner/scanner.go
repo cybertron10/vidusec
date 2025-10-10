@@ -475,16 +475,16 @@ func (s *Service) RescanScan(scanID, userID int, req *ScanRequest) (*ScanRespons
 }
 
 // GetAllScansDebug returns all scans from database (for debugging)
-func (s *Service) GetAllScansDebug() ([]Scan, error) {
+func (s *Service) GetAllScansDebug() ([]database.Scan, error) {
 	rows, err := s.db.Query("SELECT id, user_id, target_url, status, progress, created_at FROM scans ORDER BY created_at DESC LIMIT 10")
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var scans []Scan
+	var scans []database.Scan
 	for rows.Next() {
-		var scan Scan
+		var scan database.Scan
 		err := rows.Scan(&scan.ID, &scan.UserID, &scan.TargetURL, &scan.Status, &scan.Progress, &scan.CreatedAt)
 		if err != nil {
 			continue
