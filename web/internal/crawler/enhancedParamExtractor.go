@@ -99,7 +99,7 @@ func ExtractAllParameters(result *CrawlResult) []string {
 }
 
 // ExtractFormData extracts all form-related data
-func ExtractFormData(result *enhancedCrawler.CrawlResult) []FormData {
+func ExtractFormData(result *CrawlResult) []FormData {
 	var formData []FormData
 	
 	// Process form fields
