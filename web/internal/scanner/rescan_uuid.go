@@ -1,6 +1,9 @@
 package scanner
 
-import "log"
+import (
+	"encoding/json"
+	"log"
+)
 
 // RescanScanByUUID restarts a scan by UUID with authorization check
 func (s *Service) RescanScanByUUID(scanUUID string, userID int, req *ScanRequest) (*ScanResponse, error) {
@@ -18,7 +21,18 @@ func (s *Service) RescanScanByUUID(scanUUID string, userID int, req *ScanRequest
 
 	// Set the target URL in the request for the rescan
 	req.TargetURL = scan.TargetURL
-	log.Printf("Rescan request prepared - URL: %s, MaxDepth: %d, MaxPages: %d", req.TargetURL, req.MaxDepth, req.MaxPages)
+	
+	// Get original headers from the scan results before deleting them
+	originalHeaders, err := s.getOriginalHeadersFromScan(scanUUID)
+	if err != nil {
+		log.Printf("Warning: Could not retrieve original headers for rescan: %v", err)
+	} else if len(originalHeaders) > 0 {
+		// Use original headers for rescan
+		req.Headers = originalHeaders
+		log.Printf("Rescan will use original headers: %v", originalHeaders)
+	}
+	
+	log.Printf("Rescan request prepared - URL: %s, MaxDepth: %d, MaxPages: %d, Headers: %d", req.TargetURL, req.MaxDepth, req.MaxPages, len(req.Headers))
 
 	// Reset scan status and progress
 	log.Printf("Resetting scan status for UUID %s", scanUUID)
@@ -65,4 +79,50 @@ func (s *Service) RescanScanByUUID(scanUUID string, userID int, req *ScanRequest
 		Status:  "pending",
 		Message: "Rescan initiated successfully",
 	}, nil
+}
+
+// getOriginalHeadersFromScan retrieves the original headers used in a scan
+func (s *Service) getOriginalHeadersFromScan(scanUUID string) (map[string]string, error) {
+	// Get a sample of headers from the scan results to extract the original custom headers
+	rows, err := s.db.Query(`
+		SELECT headers 
+		FROM scan_results 
+		WHERE scan_uuid = ? AND headers IS NOT NULL AND headers != '{}' AND headers != 'null'
+		LIMIT 1`,
+		scanUUID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	if !rows.Next() {
+		// No headers found, return empty map
+		return make(map[string]string), nil
+	}
+
+	var headersJSON string
+	if err := rows.Scan(&headersJSON); err != nil {
+		return nil, err
+	}
+
+	// Parse the headers JSON
+	var headers map[string]interface{}
+	if err := json.Unmarshal([]byte(headersJSON), &headers); err != nil {
+		return nil, err
+	}
+
+	// Convert to map[string]string and filter out default headers
+	originalHeaders := make(map[string]string)
+	for key, value := range headers {
+		if valueStr, ok := value.(string); ok {
+			// Filter out default headers that are automatically added
+			if key != "User-Agent" && key != "Content-Type" && key != "Accept" && 
+			   key != "Accept-Language" && key != "Accept-Encoding" && key != "Connection" {
+				originalHeaders[key] = valueStr
+			}
+		}
+	}
+
+	log.Printf("Retrieved original headers for rescan: %v", originalHeaders)
+	return originalHeaders, nil
 }
