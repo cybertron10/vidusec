@@ -346,29 +346,30 @@ func (h *Handler) DeleteScan(c *gin.Context) {
 	})
 }
 
-// GetScanStatus returns the status of a specific scan
+// GetScanStatus returns the status of a specific scan by UUID
 func (h *Handler) GetScanStatus(c *gin.Context) {
 	userID := c.GetInt("user_id")
 
-	scanIDStr := c.Param("id")
-	scanID, err := strconv.Atoi(scanIDStr)
-	if err != nil {
+	scanUUID := c.Param("id")
+	
+	// Validate UUID format
+	if !isValidUUID(scanUUID) {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid scan ID",
+			"error": "Invalid scan ID format",
 		})
 		return
 	}
 
-	scan, err := h.scannerService.GetScan(scanID, userID)
+	scan, err := h.scannerService.GetScanByUUID(scanUUID, userID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
-			"error": "Scan not found",
+			"error": "Scan not found or access denied",
 		})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"scan_id":  scan.ID,
+		"scan_id":  scan.ScanUUID,
 		"status":   scan.Status,
 		"progress": scan.Progress,
 		"started_at":   scan.StartedAt,
@@ -376,24 +377,34 @@ func (h *Handler) GetScanStatus(c *gin.Context) {
 	})
 }
 
-// GetScanResults returns the results of a specific scan
+// GetScanResults returns the results of a specific scan by UUID
 func (h *Handler) GetScanResults(c *gin.Context) {
 	userID := c.GetInt("user_id")
-	scanIDStr := c.Param("id")
+	scanUUID := c.Param("id")
 	
-	log.Printf("GetScanResults called - UserID: %d, ScanID: %s", userID, scanIDStr)
+	log.Printf("GetScanResults called - UserID: %d, ScanUUID: %s", userID, scanUUID)
 	
-	scanID, err := strconv.Atoi(scanIDStr)
-	if err != nil {
-		log.Printf("Invalid scan ID: %s", scanIDStr)
+	// Validate UUID format
+	if !isValidUUID(scanUUID) {
+		log.Printf("Invalid scan UUID: %s", scanUUID)
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid scan ID",
+			"error": "Invalid scan ID format",
 		})
 		return
 	}
 
-	log.Printf("Getting scan results for scan %d, user %d", scanID, userID)
-	results, err := h.scannerService.GetScanResults(scanID, userID)
+	// Verify ownership first
+	err := h.scannerService.VerifyScanOwnership(scanUUID, userID)
+	if err != nil {
+		log.Printf("Scan access denied - UserID: %d, ScanUUID: %s, Error: %v", userID, scanUUID, err)
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": "Scan not found or access denied",
+		})
+		return
+	}
+
+	log.Printf("Getting scan results for scan %s, user %d", scanUUID, userID)
+	results, err := h.scannerService.GetScanResultsByUUID(scanUUID, userID)
 	if err != nil {
 		log.Printf("Error getting scan results: %v", err)
 		c.JSON(http.StatusNotFound, gin.H{
@@ -402,26 +413,26 @@ func (h *Handler) GetScanResults(c *gin.Context) {
 		return
 	}
 
-	log.Printf("Found %d results for scan %d", len(results), scanID)
+	log.Printf("Found %d results for scan %s", len(results), scanUUID)
 	c.JSON(http.StatusOK, gin.H{
-		"scan_id": scanID,
+		"scan_id": scanUUID,
 		"results": results,
 		"count":   len(results),
 	})
 }
 
-// RescanScan restarts a scan with the same parameters
+// RescanScan restarts a scan with the same parameters by UUID
 func (h *Handler) RescanScan(c *gin.Context) {
 	userID := c.GetInt("user_id")
-	scanIDStr := c.Param("id")
+	scanUUID := c.Param("id")
 	
-	log.Printf("RescanScan called - UserID: %d, ScanID: %s", userID, scanIDStr)
+	log.Printf("RescanScan called - UserID: %d, ScanUUID: %s", userID, scanUUID)
 	
-	scanID, err := strconv.Atoi(scanIDStr)
-	if err != nil {
-		log.Printf("Invalid scan ID for rescan: %s", scanIDStr)
+	// Validate UUID format
+	if !isValidUUID(scanUUID) {
+		log.Printf("Invalid scan UUID for rescan: %s", scanUUID)
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid scan ID",
+			"error": "Invalid scan ID format",
 		})
 		return
 	}
@@ -448,15 +459,26 @@ func (h *Handler) RescanScan(c *gin.Context) {
 		req.MaxPages = 20000
 	}
 
-	// Create ScanRequest struct
-	scanReq := &scanner.ScanRequest{
-		MaxDepth: req.MaxDepth,
-		MaxPages: req.MaxPages,
-		Headers:  make(map[string]string), // Empty headers for rescan
+	// Get the existing scan to get the target URL
+	scan, err := h.scannerService.GetScanByUUID(scanUUID, userID)
+	if err != nil {
+		log.Printf("Error getting scan for rescan: %v", err)
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": "Scan not found or access denied",
+		})
+		return
 	}
 
-	log.Printf("Starting rescan for scan %d, user %d", scanID, userID)
-	response, err := h.scannerService.RescanScan(scanID, userID, scanReq)
+	// Create ScanRequest struct with the original target URL
+	scanReq := &scanner.ScanRequest{
+		TargetURL: scan.TargetURL,
+		MaxDepth:  req.MaxDepth,
+		MaxPages:  req.MaxPages,
+		Headers:   make(map[string]string), // Empty headers for rescan
+	}
+
+	log.Printf("Starting rescan for scan %s, user %d", scanUUID, userID)
+	response, err := h.scannerService.RescanScanByUUID(scanUUID, userID, scanReq)
 	if err != nil {
 		log.Printf("Error starting rescan: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -465,7 +487,7 @@ func (h *Handler) RescanScan(c *gin.Context) {
 		return
 	}
 
-	log.Printf("Rescan started successfully for scan %d", scanID)
+	log.Printf("Rescan started successfully for scan %s", scanUUID)
 	c.JSON(http.StatusOK, response)
 }
 

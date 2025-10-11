@@ -133,7 +133,7 @@ func (s *Service) runScan(scanID int, scanUUID string, req *ScanRequest) {
 	log.Printf("Saving scan results for scan %d: %d GET, %d POST, %d JS endpoints", 
 		scanID, len(scanData.GETEndpoints), len(scanData.POSTEndpoints), len(scanData.JSEndpoints))
 	
-	err = s.saveScanResults(scanID, scanData)
+	err = s.saveScanResults(scanID, scanUUID, scanData)
 	if err != nil {
 		log.Printf("Error saving scan results: %v", err)
 		s.updateScanStatus(scanID, "failed", 0)
@@ -146,7 +146,7 @@ func (s *Service) runScan(scanID int, scanUUID string, req *ScanRequest) {
 	s.updateScanProgress(scanID, 90)
 
 	// Save files
-	err = s.saveScanFiles(scanID, scanDir, scanData)
+	err = s.saveScanFiles(scanID, scanUUID, scanDir, scanData)
 	if err != nil {
 		log.Printf("Error saving scan files: %v", err)
 		// Don't fail the scan for file save errors
@@ -160,16 +160,16 @@ func (s *Service) runScan(scanID int, scanUUID string, req *ScanRequest) {
 }
 
 // saveScanResults saves discovered endpoints to database
-func (s *Service) saveScanResults(scanID int, scanData *crawler.ScanningData) error {
+func (s *Service) saveScanResults(scanID int, scanUUID string, scanData *crawler.ScanningData) error {
 	// Save GET endpoints
 	for _, endpoint := range scanData.GETEndpoints {
 		paramsJSON, _ := json.Marshal(endpoint.Parameters)
 		headersJSON, _ := json.Marshal(endpoint.Headers)
 		
 		_, err := s.db.Exec(`
-			INSERT INTO scan_results (scan_id, endpoint_type, url, method, parameters, headers, description)
-			VALUES (?, ?, ?, ?, ?, ?, ?)`,
-			scanID, "get", endpoint.URL, endpoint.Method, string(paramsJSON), 
+			INSERT INTO scan_results (scan_id, scan_uuid, endpoint_type, url, method, parameters, headers, description)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+			scanID, scanUUID, "get", endpoint.URL, endpoint.Method, string(paramsJSON), 
 			string(headersJSON), endpoint.Description)
 		if err != nil {
 			return err
@@ -183,9 +183,9 @@ func (s *Service) saveScanResults(scanID int, scanData *crawler.ScanningData) er
 		headersJSON, _ := json.Marshal(endpoint.Headers)
 		
 		_, err := s.db.Exec(`
-			INSERT INTO scan_results (scan_id, endpoint_type, url, method, parameters, form_data, headers, description)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-			scanID, "post", endpoint.URL, endpoint.Method, string(paramsJSON), 
+			INSERT INTO scan_results (scan_id, scan_uuid, endpoint_type, url, method, parameters, form_data, headers, description)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			scanID, scanUUID, "post", endpoint.URL, endpoint.Method, string(paramsJSON), 
 			string(formDataJSON), string(headersJSON), endpoint.Description)
 		if err != nil {
 			return err
@@ -198,9 +198,9 @@ func (s *Service) saveScanResults(scanID int, scanData *crawler.ScanningData) er
 		headersJSON, _ := json.Marshal(endpoint.Headers)
 		
 		_, err := s.db.Exec(`
-			INSERT INTO scan_results (scan_id, endpoint_type, url, method, parameters, headers, description)
-			VALUES (?, ?, ?, ?, ?, ?, ?)`,
-			scanID, "js_api", endpoint.URL, endpoint.Method, string(paramsJSON), 
+			INSERT INTO scan_results (scan_id, scan_uuid, endpoint_type, url, method, parameters, headers, description)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+			scanID, scanUUID, "js_api", endpoint.URL, endpoint.Method, string(paramsJSON), 
 			string(headersJSON), endpoint.Description)
 		if err != nil {
 			return err
@@ -209,16 +209,16 @@ func (s *Service) saveScanResults(scanID int, scanData *crawler.ScanningData) er
 
 	// Save statistics
 	_, err := s.db.Exec(`
-		INSERT INTO scan_statistics (scan_id, total_endpoints, get_endpoints, post_endpoints, js_endpoints, total_parameters)
-		VALUES (?, ?, ?, ?, ?, ?)`,
-		scanID, scanData.Summary.TotalEndpoints, scanData.Summary.GETCount, 
+		INSERT INTO scan_statistics (scan_id, scan_uuid, total_endpoints, get_endpoints, post_endpoints, js_endpoints, total_parameters)
+		VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		scanID, scanUUID, scanData.Summary.TotalEndpoints, scanData.Summary.GETCount, 
 		scanData.Summary.POSTCount, scanData.Summary.JSCount, scanData.Summary.TotalParams)
 	
 	return err
 }
 
 // saveScanFiles saves generated files
-func (s *Service) saveScanFiles(scanID int, scanDir string, scanData *crawler.ScanningData) error {
+func (s *Service) saveScanFiles(scanID int, scanUUID string, scanDir string, scanData *crawler.ScanningData) error {
 	// Save JSON data
 	jsonFile := filepath.Join(scanDir, "scan_results.json")
 	err := scanData.SaveToFile(jsonFile)
@@ -249,9 +249,9 @@ func (s *Service) saveScanFiles(scanID int, scanDir string, scanData *crawler.Sc
 		}
 
 		_, err = s.db.Exec(`
-			INSERT INTO scan_files (scan_id, file_type, file_path, file_size)
-			VALUES (?, ?, ?, ?)`,
-			scanID, file.fileType, file.filePath, info.Size())
+			INSERT INTO scan_files (scan_id, scan_uuid, file_type, file_path, file_size)
+			VALUES (?, ?, ?, ?, ?)`,
+			scanID, scanUUID, file.fileType, file.filePath, info.Size())
 		if err != nil {
 			log.Printf("Error saving file record: %v", err)
 		}
@@ -283,7 +283,7 @@ func (s *Service) updateScanProgress(scanID int, progress int) {
 // GetScans retrieves scans for a user
 func (s *Service) GetScans(userID int, limit, offset int) ([]database.Scan, error) {
 	rows, err := s.db.Query(`
-		SELECT id, user_id, target_url, max_depth, max_pages, status, progress, 
+		SELECT id, scan_uuid, user_id, target_url, max_depth, max_pages, status, progress, 
 		       started_at, completed_at, created_at
 		FROM scans 
 		WHERE user_id = ? 
@@ -299,7 +299,7 @@ func (s *Service) GetScans(userID int, limit, offset int) ([]database.Scan, erro
 	for rows.Next() {
 		var scan database.Scan
 		err := rows.Scan(
-			&scan.ID, &scan.UserID, &scan.TargetURL, &scan.MaxDepth, &scan.MaxPages,
+			&scan.ID, &scan.ScanUUID, &scan.UserID, &scan.TargetURL, &scan.MaxDepth, &scan.MaxPages,
 			&scan.Status, &scan.Progress, &scan.StartedAt, &scan.CompletedAt, &scan.CreatedAt)
 		if err != nil {
 			return nil, err
@@ -582,5 +582,62 @@ func (s *Service) DeleteScanByUUID(scanUUID string, userID int) error {
 	}
 
 	return nil
+}
+
+// GetScanResultsByUUID retrieves scan results by UUID with authorization check
+func (s *Service) GetScanResultsByUUID(scanUUID string, userID int) ([]database.ScanResult, error) {
+	// Verify ownership first
+	err := s.VerifyScanOwnership(scanUUID, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := s.db.Query(`
+		SELECT id, scan_id, scan_uuid, endpoint_type, url, method, parameters, form_data, headers, description, created_at
+		FROM scan_results 
+		WHERE scan_uuid = ?
+		ORDER BY created_at DESC`,
+		scanUUID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []database.ScanResult
+	for rows.Next() {
+		var result database.ScanResult
+		var paramsJSON, formDataJSON, headersJSON sql.NullString
+
+		err := rows.Scan(
+			&result.ID, &result.ScanID, &result.ScanUUID, &result.EndpointType, &result.URL, &result.Method,
+			&paramsJSON, &formDataJSON, &headersJSON, &result.Description, &result.CreatedAt)
+		if err != nil {
+			log.Printf("Error scanning result row: %v", err)
+			continue
+		}
+
+		// Parse JSON fields
+		if paramsJSON.Valid && paramsJSON.String != "" {
+			json.Unmarshal([]byte(paramsJSON.String), &result.Parameters)
+		} else {
+			result.Parameters = make(map[string]interface{})
+		}
+
+		if formDataJSON.Valid && formDataJSON.String != "" {
+			json.Unmarshal([]byte(formDataJSON.String), &result.FormData)
+		} else {
+			result.FormData = make(map[string]interface{})
+		}
+
+		if headersJSON.Valid && headersJSON.String != "" {
+			json.Unmarshal([]byte(headersJSON.String), &result.Headers)
+		} else {
+			result.Headers = make(map[string]interface{})
+		}
+
+		results = append(results, result)
+	}
+
+	return results, nil
 }
 

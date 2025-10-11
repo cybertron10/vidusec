@@ -230,8 +230,8 @@
 
             getScanIdFromUrl() {
                 const path = window.location.pathname;
-                const match = path.match(/\/scan-results\/(\d+)/);
-                return match ? parseInt(match[1]) : null;
+                const match = path.match(/\/scan-results\/([a-f0-9-]+)/);
+                return match ? match[1] : null;
             }
 
             updateUserInfo() {
@@ -283,7 +283,7 @@
             updateScanSummary() {
                 if (!this.scanData) return;
 
-                document.getElementById('scanTitle').textContent = `Scan #${this.scanData.scan.id}`;
+                document.getElementById('scanTitle').textContent = `Scan #${this.scanData.scan.scan_uuid.substring(0, 8)}...`;
                 document.getElementById('scanUrl').textContent = this.scanData.scan.target_url;
                 document.getElementById('scanProgress').textContent = `${this.scanData.scan.progress}%`;
                 document.getElementById('scanDate').textContent = new Date(this.scanData.scan.created_at).toLocaleString();
