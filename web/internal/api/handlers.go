@@ -536,14 +536,14 @@ func (h *Handler) GetScanParameters(c *gin.Context) {
 	// Extract unique parameters
 	paramSet := make(map[string]bool)
 	for _, result := range results {
-		// Extract parameters from map
+		// Extract parameters from map (already unmarshaled by GetScanResultsByUUID)
 		if result.Parameters != nil {
 			for param := range result.Parameters {
 				paramSet[param] = true
 			}
 		}
 		
-		// Extract form data from map
+		// Extract form data from map (already unmarshaled by GetScanResultsByUUID)
 		if result.FormData != nil {
 			for param := range result.FormData {
 				paramSet[param] = true
