@@ -551,6 +551,13 @@
             }
         }
 
+        // Global logout function
+        function logout() {
+            localStorage.removeItem('vidusec_token');
+            localStorage.removeItem('vidusec_user');
+            window.location.href = '/';
+        }
+
         // Global function to toggle details sections
         function toggleDetails(elementId) {
             const element = document.getElementById(elementId);
