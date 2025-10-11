@@ -484,3 +484,25 @@ func (s *Service) RescanScan(scanID, userID int, req *ScanRequest) (*ScanRespons
 	}, nil
 }
 
+// GetScanByHost finds the most recent scan for a given host
+func (s *Service) GetScanByHost(userID int, hostURL string) (*database.Scan, error) {
+	scan := &database.Scan{}
+	
+	// Find the most recent scan for this host
+	err := s.db.QueryRow(`
+		SELECT id, user_id, target_url, status, progress, created_at, updated_at
+		FROM scans 
+		WHERE user_id = ? AND target_url LIKE ?
+		ORDER BY created_at DESC 
+		LIMIT 1`,
+		userID, hostURL+"%").Scan(
+		&scan.ID, &scan.UserID, &scan.TargetURL, &scan.Status, 
+		&scan.Progress, &scan.CreatedAt, &scan.UpdatedAt)
+	
+	if err != nil {
+		return nil, err
+	}
+	
+	return scan, nil
+}
+

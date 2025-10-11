@@ -48,6 +48,26 @@ func isValidScanID(idStr string) bool {
 	return matched
 }
 
+func normalizeURL(urlStr string) string {
+	u, err := url.Parse(urlStr)
+	if err != nil {
+		return urlStr
+	}
+	
+	// Normalize the URL to focus on host
+	u.Path = ""
+	u.RawQuery = ""
+	u.Fragment = ""
+	
+	// Remove trailing slash
+	normalized := u.String()
+	if strings.HasSuffix(normalized, "/") {
+		normalized = normalized[:len(normalized)-1]
+	}
+	
+	return normalized
+}
+
 // Register handles user registration
 func (h *Handler) Register(c *gin.Context) {
 	var req auth.RegisterRequest
