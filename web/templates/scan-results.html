@@ -373,6 +373,8 @@
             }
 
             showSection(section) {
+                console.log('showSection called with:', section);
+                
                 // Hide all sections
                 document.querySelectorAll('.section').forEach(el => el.classList.add('hidden'));
                 
@@ -380,16 +382,34 @@
                 document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
                 
                 // Show selected section
-                document.getElementById(`${section}Section`).classList.remove('hidden');
+                const sectionElement = document.getElementById(`${section}Section`);
+                console.log('Section element:', sectionElement);
+                if (sectionElement) {
+                    sectionElement.classList.remove('hidden');
+                    console.log('Section shown:', section);
+                } else {
+                    console.error('Section element not found:', `${section}Section`);
+                }
                 
                 // Add active class to selected sidebar item
-                document.getElementById(`${section}Btn`).classList.add('active');
+                const buttonElement = document.getElementById(`${section}Btn`);
+                console.log('Button element:', buttonElement);
+                if (buttonElement) {
+                    buttonElement.classList.add('active');
+                    console.log('Button activated:', section);
+                } else {
+                    console.error('Button element not found:', `${section}Btn`);
+                }
                 
                 this.currentSection = section;
 
                 // Load data for specific sections
                 if (section === 'parameters' && (!this.parameters || this.parameters.length === 0)) {
+                    console.log('Loading parameters for section');
                     this.loadParameters();
+                } else if (section === 'parameters') {
+                    console.log('Parameters already loaded, displaying them');
+                    this.displayParameters();
                 }
             }
 
@@ -601,10 +621,16 @@
             }
 
             displayParameters() {
+                console.log('displayParameters called with parameters:', this.parameters);
                 const container = document.getElementById('parametersList');
-                if (!container) return;
+                console.log('Parameters container:', container);
+                if (!container) {
+                    console.error('Parameters container not found');
+                    return;
+                }
 
                 if (this.parameters.length === 0) {
+                    console.log('No parameters to display');
                     container.innerHTML = `
                         <div class="text-center py-12">
                             <i class="fas fa-list text-4xl text-gray-400 mb-4"></i>
@@ -614,6 +640,7 @@
                     return;
                 }
 
+                console.log('Displaying', this.parameters.length, 'parameters');
                 container.innerHTML = this.parameters.map(param => `
                     <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 hover:bg-gray-100 transition-colors">
                         <div class="flex items-center justify-between">
@@ -624,6 +651,7 @@
                         </div>
                     </div>
                 `).join('');
+                console.log('Parameters displayed successfully');
             }
 
             updateParametersCount() {
