@@ -240,28 +240,22 @@ func EnhancedCrawl(startURL string, maxDepth int, maxPages int, customHeaders ma
 				time.Sleep(50 * time.Millisecond)
 				status := resp.StatusCode
 				
-				// Log authentication-related errors
+				// Log authentication-related errors but continue processing
 				if status == http.StatusUnauthorized {
-					log.Printf("Authentication failed for %s: 401 Unauthorized", pageURL)
-					resp.Body.Close()
-					return
+					log.Printf("Authentication failed for %s: 401 Unauthorized - continuing to extract URLs", pageURL)
 				}
 				if status == http.StatusForbidden {
-					log.Printf("Access forbidden for %s: 403 Forbidden", pageURL)
-					resp.Body.Close()
-					return
+					log.Printf("Access forbidden for %s: 403 Forbidden - continuing to extract URLs", pageURL)
 				}
 				if status == http.StatusNotFound {
-					log.Printf("Page not found: %s (404)", pageURL)
+					log.Printf("Page not found: %s (404) - skipping", pageURL)
 					resp.Body.Close()
 					return
 				}
 				
-				// Log other non-200 status codes
+				// Log other non-200 status codes but continue processing for most
 				if status < 200 || status >= 300 {
-					log.Printf("HTTP error for %s: %d", pageURL, status)
-					resp.Body.Close()
-					return
+					log.Printf("HTTP error for %s: %d - continuing to extract URLs", pageURL, status)
 				}
 				builder := new(strings.Builder)
 				buf := make([]byte, 16384)
