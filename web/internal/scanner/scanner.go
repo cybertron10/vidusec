@@ -124,6 +124,7 @@ func (s *Service) runScan(scanID int, scanUUID string, req *ScanRequest) {
 		crawlResult.JavaScriptAPIs,
 		crawlResult.HiddenFields,
 		crawlResult.POSTEndpoints,
+		req.Headers,
 	)
 
 	// Update progress

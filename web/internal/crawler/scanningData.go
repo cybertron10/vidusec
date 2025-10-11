@@ -37,7 +37,7 @@ type DataSummary struct {
 }
 
 // CreateScanningData creates structured data for XSS scanning
-func CreateScanningData(urls []string, formFields []FormField, jsAPIs []JavaScriptAPI, hiddenFields []HiddenField, postEndpoints []POSTEndpoint) *ScanningData {
+func CreateScanningData(urls []string, formFields []FormField, jsAPIs []JavaScriptAPI, hiddenFields []HiddenField, postEndpoints []POSTEndpoint, customHeaders map[string]string) *ScanningData {
 	scanningData := &ScanningData{
 		GETEndpoints:  []EndpointData{},
 		POSTEndpoints: []EndpointData{},
@@ -47,7 +47,7 @@ func CreateScanningData(urls []string, formFields []FormField, jsAPIs []JavaScri
 	// Process URLs for GET endpoints
 	for _, url := range urls {
 		if isGETEndpoint(url) {
-			endpoint := createGETEndpoint(url)
+			endpoint := createGETEndpoint(url, customHeaders)
 			scanningData.GETEndpoints = append(scanningData.GETEndpoints, endpoint)
 		}
 	}
@@ -80,9 +80,20 @@ func CreateScanningData(urls []string, formFields []FormField, jsAPIs []JavaScri
 }
 
 // createGETEndpoint creates GET endpoint data
-func createGETEndpoint(url string) EndpointData {
+func createGETEndpoint(url string, customHeaders map[string]string) EndpointData {
 	// Parse URL to extract parameters
 	params := extractURLParameters(url)
+	
+	// Use custom headers if provided, otherwise use default
+	headers := make(map[string]string)
+	if customHeaders != nil {
+		for key, value := range customHeaders {
+			headers[key] = value
+		}
+	} else {
+		// Default headers if none provided
+		headers["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+	}
 	
 	return EndpointData{
 		URL:        url,
@@ -90,9 +101,7 @@ func createGETEndpoint(url string) EndpointData {
 		Type:       "get",
 		Source:     "link",
 		Parameters: params,
-		Headers: map[string]string{
-			"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-		},
+		Headers:    headers,
 		Description: "GET endpoint discovered from links",
 	}
 }
