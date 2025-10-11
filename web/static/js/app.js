@@ -133,10 +133,15 @@ class ViduSecApp {
                 
                 this.hideLoginModal();
                 this.updateUI();
-                this.showToast('Login successful!', 'success');
+                this.showToast('Login successful! Redirecting to dashboard...', 'success');
                 
                 // Clear form
                 document.getElementById('loginForm').reset();
+                
+                // Redirect to dashboard after a short delay
+                setTimeout(() => {
+                    this.goToDashboard();
+                }, 1000);
             } else {
                 this.showToast(data.error || 'Login failed', 'error');
             }
@@ -169,10 +174,15 @@ class ViduSecApp {
                 
                 this.hideRegisterModal();
                 this.updateUI();
-                this.showToast('Registration successful!', 'success');
+                this.showToast('Registration successful! Redirecting to dashboard...', 'success');
                 
                 // Clear form
                 document.getElementById('registerForm').reset();
+                
+                // Redirect to dashboard after a short delay
+                setTimeout(() => {
+                    this.goToDashboard();
+                }, 1000);
             } else {
                 this.showToast(data.error || 'Registration failed', 'error');
             }

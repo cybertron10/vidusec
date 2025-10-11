@@ -482,7 +482,10 @@
                     });
 
                     if (response.ok) {
+                        // Immediately remove the scan from UI
+                        this.removeScanFromUI(scanUUID);
                         this.showToast('Scan deleted successfully', 'success');
+                        // Also refresh the data to ensure consistency
                         this.loadScans();
                         this.loadDashboardData();
                     } else if (response.status === 404) {
@@ -497,6 +500,26 @@
                 } catch (error) {
                     console.error('Error deleting scan:', error);
                     this.showToast('Error deleting scan', 'error');
+                }
+            }
+
+            removeScanFromUI(scanUUID) {
+                // Remove the scan from the scans list in the UI
+                const scanElement = document.getElementById(`scan-${scanUUID}`);
+                if (scanElement) {
+                    scanElement.remove();
+                    console.log(`Removed scan ${scanUUID} from UI`);
+                } else {
+                    console.log(`Scan element not found for UUID: ${scanUUID}`);
+                }
+                
+                // Also remove from active scans tracking
+                this.activeScans.delete(scanUUID);
+                
+                // If no scans left, show the empty state
+                const scansList = document.getElementById('scansList');
+                if (scansList && scansList.children.length === 0) {
+                    scansList.innerHTML = '<p class="text-gray-500 text-center py-8">No scans found. Start your first scan!</p>';
                 }
             }
 
