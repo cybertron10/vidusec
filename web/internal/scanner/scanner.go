@@ -4,9 +4,11 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"time"
 
@@ -236,6 +238,14 @@ func (s *Service) saveScanFiles(scanID int, scanUUID string, scanDir string, sca
 		return err
 	}
 
+	// Save parameters to file
+	paramsFile := filepath.Join(scanDir, "params.txt")
+	err = s.saveParametersToFile(scanData, paramsFile)
+	if err != nil {
+		log.Printf("Error saving parameters file: %v", err)
+		// Don't fail the scan for parameter file errors
+	}
+
 	// Record files in database
 	files := []struct {
 		fileType string
@@ -243,6 +253,7 @@ func (s *Service) saveScanFiles(scanID int, scanUUID string, scanDir string, sca
 	}{
 		{"json", jsonFile},
 		{"txt", xssFile},
+		{"params", paramsFile},
 	}
 
 	for _, file := range files {
@@ -260,6 +271,72 @@ func (s *Service) saveScanFiles(scanID int, scanUUID string, scanDir string, sca
 		}
 	}
 
+	return nil
+}
+
+// saveParametersToFile extracts and saves all parameters to a file
+func (s *Service) saveParametersToFile(scanData *crawler.ScanningData, filename string) error {
+	paramSet := make(map[string]bool)
+	
+	// Extract parameters from GET endpoints
+	for _, endpoint := range scanData.GETEndpoints {
+		for param := range endpoint.Parameters {
+			paramSet[param] = true
+		}
+	}
+	
+	// Extract parameters from POST endpoints
+	for _, endpoint := range scanData.POSTEndpoints {
+		for param := range endpoint.Parameters {
+			paramSet[param] = true
+		}
+		for param := range endpoint.FormData {
+			paramSet[param] = true
+		}
+	}
+	
+	// Extract parameters from JS endpoints
+	for _, endpoint := range scanData.JSEndpoints {
+		for param := range endpoint.Parameters {
+			paramSet[param] = true
+		}
+	}
+	
+	// Convert map to sorted slice
+	var parameters []string
+	for param := range paramSet {
+		parameters = append(parameters, param)
+	}
+	
+	// Sort parameters alphabetically
+	sort.Strings(parameters)
+	
+	// Save to file
+	file, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	
+	// Write header
+	_, err = file.WriteString("# Extracted Parameters\n")
+	if err != nil {
+		return err
+	}
+	
+	_, err = file.WriteString(fmt.Sprintf("# Total parameters found: %d\n\n", len(parameters)))
+	if err != nil {
+		return err
+	}
+	
+	// Write parameters
+	for _, param := range parameters {
+		_, err = file.WriteString(param + "\n")
+		if err != nil {
+			return err
+		}
+	}
+	
 	return nil
 }
 
