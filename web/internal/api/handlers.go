@@ -60,15 +60,13 @@ func normalizeURL(urlStr string) string {
 		return urlStr
 	}
 	
-	// Normalize the URL to focus on host
-	u.Path = ""
-	u.RawQuery = ""
-	u.Fragment = ""
+	// Only normalize the scheme and host, keep the path
+	// This way http://example.com/admin and http://example.com/login are treated as different
+	normalized := u.Scheme + "://" + u.Host
 	
-	// Remove trailing slash
-	normalized := u.String()
-	if strings.HasSuffix(normalized, "/") {
-		normalized = normalized[:len(normalized)-1]
+	// Add path if it exists and is not just "/"
+	if u.Path != "" && u.Path != "/" {
+		normalized += u.Path
 	}
 	
 	return normalized

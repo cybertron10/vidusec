@@ -67,6 +67,8 @@ func (s *Service) StartScan(userID int, req *ScanRequest) (*ScanResponse, error)
 
 // runScan executes the actual scanning process
 func (s *Service) runScan(scanID int, scanUUID string, req *ScanRequest) {
+	log.Printf("runScan called - ScanID: %d, ScanUUID: %s, TargetURL: %s", scanID, scanUUID, req.TargetURL)
+	
 	// Update status to running
 	now := time.Now()
 	_, err := s.db.Exec(`
@@ -494,15 +496,15 @@ func (s *Service) RescanScan(scanID, userID int, req *ScanRequest) (*ScanRespons
 func (s *Service) GetScanByHost(userID int, hostURL string) (*database.Scan, error) {
 	scan := &database.Scan{}
 	
-	// Find the most recent scan for this host
+	// Find the most recent scan for this exact normalized URL
 	err := s.db.QueryRow(`
-		SELECT id, user_id, target_url, status, progress, created_at
+		SELECT id, scan_uuid, user_id, target_url, status, progress, created_at
 		FROM scans 
-		WHERE user_id = ? AND target_url LIKE ?
+		WHERE user_id = ? AND target_url = ?
 		ORDER BY created_at DESC 
 		LIMIT 1`,
-		userID, hostURL+"%").Scan(
-		&scan.ID, &scan.UserID, &scan.TargetURL, &scan.Status, 
+		userID, hostURL).Scan(
+		&scan.ID, &scan.ScanUUID, &scan.UserID, &scan.TargetURL, &scan.Status, 
 		&scan.Progress, &scan.CreatedAt)
 	
 	if err != nil {
