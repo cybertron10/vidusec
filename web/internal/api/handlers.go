@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"vidusec/web/internal/auth"
-	"vidusec/web/internal/database"
 	"vidusec/web/internal/scanner"
 
 	"github.com/gin-gonic/gin"
