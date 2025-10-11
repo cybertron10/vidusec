@@ -208,7 +208,7 @@ func (h *Handler) StartScan(c *gin.Context) {
 	if err == nil && existingScan != nil {
 		// Overwrite existing scan instead of creating new one
 		log.Printf("Found existing scan %d for host %s, overwriting...", existingScan.ID, normalizedURL)
-		_, err := h.scannerService.RescanScan(existingScan.ID, userID, &req)
+		_, err := h.scannerService.RescanScanByUUID(existingScan.ScanUUID, userID, &req)
 		if err != nil {
 			log.Printf("Error overwriting existing scan: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{
