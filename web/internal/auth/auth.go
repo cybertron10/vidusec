@@ -2,6 +2,7 @@ package auth
 
 import (
 	"errors"
+	"os"
 	"time"
 
 	"vidusec/web/internal/database"
@@ -45,9 +46,19 @@ var (
 )
 
 const (
-	JWTSecret = "vidusec-secret-key-2024" // In production, use environment variable
 	TokenExpiration = 24 * time.Hour
 )
+
+// getJWTSecret returns the JWT secret from environment variable or generates a default
+func getJWTSecret() string {
+	secret := os.Getenv("JWT_SECRET")
+	if secret == "" {
+		// Generate a secure random secret for development
+		// In production, this should always be set via environment variable
+		secret = "vidusec-dev-secret-change-in-production-" + time.Now().Format("20060102")
+	}
+	return secret
+}
 
 func NewService(db *database.DB) *Service {
 	return &Service{db: db}
@@ -176,7 +187,7 @@ func (s *Service) GenerateToken(user *database.User) (string, time.Time, error) 
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString([]byte(JWTSecret))
+	tokenString, err := token.SignedString([]byte(getJWTSecret()))
 	if err != nil {
 		return "", time.Time{}, err
 	}
@@ -187,7 +198,7 @@ func (s *Service) GenerateToken(user *database.User) (string, time.Time, error) 
 // ValidateToken validates a JWT token and returns the claims
 func (s *Service) ValidateToken(tokenString string) (*Claims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
-		return []byte(JWTSecret), nil
+		return []byte(getJWTSecret()), nil
 	})
 
 	if err != nil {

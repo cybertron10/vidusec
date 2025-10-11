@@ -3,7 +3,10 @@ package api
 import (
 	"log"
 	"net/http"
+	"net/url"
+	"regexp"
 	"strconv"
+	"strings"
 
 	"vidusec/web/internal/auth"
 	"vidusec/web/internal/database"
@@ -22,6 +25,28 @@ func NewHandler(scannerService *scanner.Service, authService *auth.Service) *Han
 		scannerService: scannerService,
 		authService:    authService,
 	}
+}
+
+// Input validation functions
+func isValidURL(urlStr string) bool {
+	u, err := url.Parse(urlStr)
+	return err == nil && u.Scheme != "" && u.Host != ""
+}
+
+func sanitizeString(input string) string {
+	// Remove potentially dangerous characters
+	input = strings.TrimSpace(input)
+	input = strings.ReplaceAll(input, "<", "&lt;")
+	input = strings.ReplaceAll(input, ">", "&gt;")
+	input = strings.ReplaceAll(input, "\"", "&quot;")
+	input = strings.ReplaceAll(input, "'", "&#x27;")
+	input = strings.ReplaceAll(input, "&", "&amp;")
+	return input
+}
+
+func isValidScanID(idStr string) bool {
+	matched, _ := regexp.MatchString(`^\d+$`, idStr)
+	return matched
 }
 
 // Register handles user registration
@@ -118,6 +143,32 @@ func (h *Handler) StartScan(c *gin.Context) {
 		return
 	}
 
+	// Validate and sanitize input
+	if !isValidURL(req.TargetURL) {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid target URL",
+		})
+		return
+	}
+
+	// Sanitize URL
+	req.TargetURL = sanitizeString(req.TargetURL)
+
+	// Validate limits
+	if req.MaxDepth < 1 || req.MaxDepth > 50 {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Max depth must be between 1 and 50",
+		})
+		return
+	}
+
+	if req.MaxPages < 1 || req.MaxPages > 100000 {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Max pages must be between 1 and 100000",
+		})
+		return
+	}
+
 	// Set defaults
 	if req.MaxDepth == 0 {
 		req.MaxDepth = 10
@@ -181,6 +232,15 @@ func (h *Handler) GetScan(c *gin.Context) {
 	userID := c.GetInt("user_id")
 
 	scanIDStr := c.Param("id")
+	
+	// Validate scan ID format
+	if !isValidScanID(scanIDStr) {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid scan ID format",
+		})
+		return
+	}
+	
 	scanID, err := strconv.Atoi(scanIDStr)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -367,56 +427,6 @@ func (h *Handler) RescanScan(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-// GetScanResultsDebug returns scan results without authentication (for debugging)
-func (h *Handler) GetScanResultsDebug(scanID, userID int) ([]database.ScanResult, error) {
-	log.Printf("GetScanResultsDebug called - UserID: %d, ScanID: %d", userID, scanID)
-	
-	results, err := h.scannerService.GetScanResults(scanID, userID)
-	if err != nil {
-		log.Printf("Error getting scan results (debug): %v", err)
-		return nil, err
-	}
-
-	log.Printf("Found %d results for scan %d (debug)", len(results), scanID)
-	return results, nil
-}
-
-// GetAllScansDebug returns all scans from database (for debugging)
-func (h *Handler) GetAllScansDebug() ([]gin.H, error) {
-	// Get all scans from database for debugging
-	rows, err := h.scannerService.GetAllScansDebug()
-	if err != nil {
-		return nil, err
-	}
-
-	var scans []gin.H
-	for _, scan := range rows {
-		scans = append(scans, gin.H{
-			"id":         scan.ID,
-			"user_id":    scan.UserID,
-			"target_url": scan.TargetURL,
-			"status":     scan.Status,
-			"progress":   scan.Progress,
-			"created_at": scan.CreatedAt,
-		})
-	}
-
-	return scans, nil
-}
-
-// GetScanCountDebug returns scan results count and sample data (for debugging)
-func (h *Handler) GetScanCountDebug(scanID int) (gin.H, error) {
-	countData, err := h.scannerService.GetScanCountDebug(scanID)
-	if err != nil {
-		return nil, err
-	}
-
-	return gin.H{
-		"scan_id":        scanID,
-		"total_count":    countData["total_count"],
-		"sample_results": countData["sample_results"],
-	}, nil
-}
 
 // ExportScanResults exports scan results in various formats
 func (h *Handler) ExportScanResults(c *gin.Context) {

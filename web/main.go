@@ -36,6 +36,16 @@ func main() {
 	// Setup Gin router
 	r := gin.Default()
 
+	// Security headers middleware
+	r.Use(func(c *gin.Context) {
+		c.Header("X-Content-Type-Options", "nosniff")
+		c.Header("X-Frame-Options", "DENY")
+		c.Header("X-XSS-Protection", "1; mode=block")
+		c.Header("Referrer-Policy", "strict-origin-when-cross-origin")
+		c.Header("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; img-src 'self' data:; font-src 'self' https://cdnjs.cloudflare.com;")
+		c.Next()
+	})
+
 	// CORS configuration
 	config := cors.DefaultConfig()
 	config.AllowOrigins = []string{"http://localhost:3000", "http://localhost:8080"}
@@ -115,68 +125,6 @@ func setupRoutes(r *gin.Engine, apiHandler *api.Handler, authService *auth.Servi
 			scanner.GET("/scans/:id/export", apiHandler.ExportScanResults)
 		}
 
-		// Test route without authentication (temporary)
-		api.GET("/test/results/:id", func(c *gin.Context) {
-			scanIDStr := c.Param("id")
-			c.JSON(http.StatusOK, gin.H{
-				"message": "Test route working",
-				"scan_id": scanIDStr,
-			})
-		})
-
-		// Debug route to check scan results without authentication
-		api.GET("/debug/scan/:id/results", func(c *gin.Context) {
-			scanIDStr := c.Param("id")
-			scanID, err := strconv.Atoi(scanIDStr)
-			if err != nil {
-				c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid scan ID"})
-				return
-			}
-
-			// Get results without user authentication for debugging
-			results, err := apiHandler.GetScanResultsDebug(scanID, 1) // Use user ID 1 for debugging
-			if err != nil {
-				c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-				return
-			}
-
-			c.JSON(http.StatusOK, gin.H{
-				"scan_id": scanID,
-				"results": results,
-				"count":   len(results),
-			})
-		})
-
-		// Debug route to check all scans in database
-		api.GET("/debug/scans", func(c *gin.Context) {
-			scans, err := apiHandler.GetAllScansDebug()
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				return
-			}
-			c.JSON(http.StatusOK, gin.H{
-				"scans": scans,
-				"count": len(scans),
-			})
-		})
-
-		// Debug route to check scan results count
-		api.GET("/debug/scan/:id/count", func(c *gin.Context) {
-			scanIDStr := c.Param("id")
-			scanID, err := strconv.Atoi(scanIDStr)
-			if err != nil {
-				c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid scan ID"})
-				return
-			}
-
-			countData, err := apiHandler.GetScanCountDebug(scanID)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				return
-			}
-
-			c.JSON(http.StatusOK, countData)
-		})
 
 		// Dashboard routes (protected)
 		dashboard := api.Group("/dashboard")
