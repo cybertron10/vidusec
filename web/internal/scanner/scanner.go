@@ -490,14 +490,14 @@ func (s *Service) GetScanByHost(userID int, hostURL string) (*database.Scan, err
 	
 	// Find the most recent scan for this host
 	err := s.db.QueryRow(`
-		SELECT id, user_id, target_url, status, progress, created_at, updated_at
+		SELECT id, user_id, target_url, status, progress, created_at
 		FROM scans 
 		WHERE user_id = ? AND target_url LIKE ?
 		ORDER BY created_at DESC 
 		LIMIT 1`,
 		userID, hostURL+"%").Scan(
 		&scan.ID, &scan.UserID, &scan.TargetURL, &scan.Status, 
-		&scan.Progress, &scan.CreatedAt, &scan.UpdatedAt)
+		&scan.Progress, &scan.CreatedAt)
 	
 	if err != nil {
 		return nil, err
