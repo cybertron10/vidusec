@@ -219,7 +219,13 @@ func EnhancedCrawl(startURL string, maxDepth int, maxPages int, customHeaders ma
 				headersMutex.Unlock()
 				
 				for headerName, headerValue := range headersCopy {
-					if headerName != "Accept-Encoding" && headerName != "If-Modified-Since" && headerName != "Cache-Control" {
+					// Skip headers that cause conditional requests or caching issues
+					if headerName != "Accept-Encoding" && 
+					   headerName != "If-Modified-Since" && 
+					   headerName != "Cache-Control" &&
+					   headerName != "If-None-Match" &&
+					   headerName != "If-Match" &&
+					   headerName != "If-Range" {
 						req.Header.Set(headerName, headerValue)
 					}
 				}
