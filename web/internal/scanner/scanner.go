@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -318,18 +317,7 @@ func (s *Service) saveParametersToFile(scanData *crawler.ScanningData, filename 
 	}
 	defer file.Close()
 	
-	// Write header
-	_, err = file.WriteString("# Extracted Parameters\n")
-	if err != nil {
-		return err
-	}
-	
-	_, err = file.WriteString(fmt.Sprintf("# Total parameters found: %d\n\n", len(parameters)))
-	if err != nil {
-		return err
-	}
-	
-	// Write parameters
+	// Write parameters (clean wordlist without comments)
 	for _, param := range parameters {
 		_, err = file.WriteString(param + "\n")
 		if err != nil {
