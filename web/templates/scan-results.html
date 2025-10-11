@@ -293,6 +293,7 @@
                         console.log('Results array:', this.results);
                         this.updateCounts();
                         this.displayEndpoints();
+                        this.loadParameters(); // Load parameters on page load
                     } else {
                         console.error('Failed to load scan results:', response.status);
                         this.showToast('Error loading scan results', 'error');
@@ -359,6 +360,11 @@
                 document.getElementById('javascriptCount').textContent = jsEndpoints.length;
                 document.getElementById('formsCount').textContent = forms.length;
                 document.getElementById('vulnerabilitiesCount').textContent = '0'; // Placeholder
+                
+                // Update parameters count if parameters are loaded
+                if (this.parameters && this.parameters.length > 0) {
+                    document.getElementById('parametersCount').textContent = this.parameters.length;
+                }
             }
 
             displayEndpoints() {
@@ -574,10 +580,14 @@
 
             async loadParameters() {
                 try {
+                    console.log('Loading parameters for scan:', this.scanId);
                     const response = await this.apiCall(`/scanner/scans/${this.scanId}/parameters`);
+                    console.log('Parameters API response:', response.status, response.ok);
                     if (response.ok) {
                         const data = await response.json();
+                        console.log('Parameters data:', data);
                         this.parameters = data.parameters || [];
+                        console.log('Parameters array:', this.parameters);
                         this.displayParameters();
                         this.updateParametersCount();
                     } else {

@@ -507,8 +507,11 @@ func (h *Handler) GetScanParameters(c *gin.Context) {
 	userID := c.GetInt("user_id")
 	scanUUID := c.Param("id")
 	
+	log.Printf("GetScanParameters called - UserID: %d, ScanUUID: %s", userID, scanUUID)
+	
 	// Validate UUID format
 	if !isValidUUID(scanUUID) {
+		log.Printf("Invalid scan UUID: %s", scanUUID)
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Invalid scan ID format",
 		})
@@ -518,6 +521,7 @@ func (h *Handler) GetScanParameters(c *gin.Context) {
 	// Verify scan ownership
 	err := h.scannerService.VerifyScanOwnership(scanUUID, userID)
 	if err != nil {
+		log.Printf("Scan ownership verification failed: %v", err)
 		c.JSON(http.StatusNotFound, gin.H{
 			"error": "Scan not found or access denied",
 		})
@@ -527,19 +531,26 @@ func (h *Handler) GetScanParameters(c *gin.Context) {
 	// Get scan results to extract parameters
 	results, err := h.scannerService.GetScanResultsByUUID(scanUUID, userID)
 	if err != nil {
+		log.Printf("Error getting scan results: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to get scan results",
 		})
 		return
 	}
+	
+	log.Printf("Found %d results for parameter extraction", len(results))
 
 	// Extract unique parameters
 	paramSet := make(map[string]bool)
+	paramCount := 0
+	formDataCount := 0
+	
 	for _, result := range results {
 		// Extract parameters from map (already unmarshaled by GetScanResultsByUUID)
 		if result.Parameters != nil {
 			for param := range result.Parameters {
 				paramSet[param] = true
+				paramCount++
 			}
 		}
 		
@@ -547,6 +558,7 @@ func (h *Handler) GetScanParameters(c *gin.Context) {
 		if result.FormData != nil {
 			for param := range result.FormData {
 				paramSet[param] = true
+				formDataCount++
 			}
 		}
 	}
@@ -558,6 +570,8 @@ func (h *Handler) GetScanParameters(c *gin.Context) {
 	}
 	sort.Strings(parameters)
 
+	log.Printf("Parameter extraction complete - Total params: %d, Form data: %d, Unique params: %d", paramCount, formDataCount, len(parameters))
+	
 	c.JSON(http.StatusOK, gin.H{
 		"scan_id": scanUUID,
 		"parameters": parameters,
