@@ -124,11 +124,17 @@ func (h *Handler) Login(c *gin.Context) {
 		return
 	}
 
+	// Set the auth token as a cookie for web authentication
+	c.SetCookie("auth_token", response.Token, 3600*24*7, "/", "", false, true) // 7 days, httpOnly
+
 	c.JSON(http.StatusOK, response)
 }
 
 // Logout handles user logout
 func (h *Handler) Logout(c *gin.Context) {
+	// Clear the auth token cookie
+	c.SetCookie("auth_token", "", -1, "/", "", false, true) // Expire immediately
+	
 	// In a stateless JWT system, logout is handled client-side
 	// We could implement token blacklisting here if needed
 	c.JSON(http.StatusOK, gin.H{

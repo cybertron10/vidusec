@@ -84,15 +84,15 @@ func setupRoutes(r *gin.Engine, apiHandler *api.Handler, authService *auth.Servi
 		})
 	})
 
-	// Dashboard route
-	r.GET("/dashboard", func(c *gin.Context) {
+	// Dashboard route (protected)
+	r.GET("/dashboard", middleware.WebAuthRequired(authService), func(c *gin.Context) {
 		c.HTML(http.StatusOK, "dashboard.html", gin.H{
 			"title": "ViduSec Dashboard",
 		})
 	})
 
-	// Scan Results route
-	r.GET("/scan-results/:id", func(c *gin.Context) {
+	// Scan Results route (protected)
+	r.GET("/scan-results/:id", middleware.WebAuthRequired(authService), func(c *gin.Context) {
 		c.HTML(http.StatusOK, "scan-results.html", gin.H{
 			"title": "Scan Results",
 		})
