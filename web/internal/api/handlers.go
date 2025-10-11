@@ -170,8 +170,9 @@ func (h *Handler) StartScan(c *gin.Context) {
 		return
 	}
 
-	// Sanitize URL
+	// Sanitize and normalize URL
 	req.TargetURL = sanitizeString(req.TargetURL)
+	normalizedURL := normalizeURL(req.TargetURL)
 
 	// Validate limits
 	if req.MaxDepth < 1 || req.MaxDepth > 50 {
@@ -196,6 +197,29 @@ func (h *Handler) StartScan(c *gin.Context) {
 		req.MaxPages = 20000
 	}
 
+	// Check if there's an existing scan for the same host
+	existingScan, err := h.scannerService.GetScanByHost(userID, normalizedURL)
+	if err == nil && existingScan != nil {
+		// Overwrite existing scan instead of creating new one
+		log.Printf("Found existing scan %d for host %s, overwriting...", existingScan.ID, normalizedURL)
+		response, err := h.scannerService.RescanScan(existingScan.ID, userID, &req)
+		if err != nil {
+			log.Printf("Error overwriting existing scan: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "Failed to update existing scan",
+			})
+			return
+		}
+		
+		c.JSON(http.StatusOK, gin.H{
+			"scan_id": existingScan.ID,
+			"status":  "overwritten",
+			"message": "Existing scan updated successfully",
+		})
+		return
+	}
+
+	// Create new scan if no existing scan found
 	response, err := h.scannerService.StartScan(userID, &req)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
