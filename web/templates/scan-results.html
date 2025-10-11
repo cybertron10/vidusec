@@ -110,6 +110,10 @@
                             <i class="fas fa-link mr-3"></i>Endpoints
                             <span id="endpointsCount" class="ml-auto bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">0</span>
                         </button>
+                        <button id="parametersBtn" onclick="console.log('Parameters button clicked!'); showSection('parameters')" class="sidebar-item w-full text-left px-4 py-3 rounded-lg font-medium text-gray-700">
+                            <i class="fas fa-list mr-3"></i>Parameters
+                            <span id="parametersCount" class="ml-auto bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded-full">0</span>
+                        </button>
                         <button id="vulnerabilitiesBtn" onclick="showSection('vulnerabilities')" class="sidebar-item w-full text-left px-4 py-3 rounded-lg font-medium text-gray-700">
                             <i class="fas fa-shield-alt mr-3"></i>Vulnerabilities
                             <span id="vulnerabilitiesCount" class="ml-auto bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full">0</span>
@@ -121,10 +125,6 @@
                         <button id="javascriptBtn" onclick="showSection('javascript')" class="sidebar-item w-full text-left px-4 py-3 rounded-lg font-medium text-gray-700">
                             <i class="fas fa-code mr-3"></i>JavaScript APIs
                             <span id="javascriptCount" class="ml-auto bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full">0</span>
-                        </button>
-                        <button id="parametersBtn" onclick="showSection('parameters')" class="sidebar-item w-full text-left px-4 py-3 rounded-lg font-medium text-gray-700">
-                            <i class="fas fa-list mr-3"></i>Parameters
-                            <span id="parametersCount" class="ml-auto bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded-full">0</span>
                         </button>
                         <button id="exportBtn" onclick="exportResults()" class="sidebar-item w-full text-left px-4 py-3 rounded-lg font-medium text-gray-700">
                             <i class="fas fa-download mr-3"></i>Export Results
@@ -735,7 +735,13 @@
             window.location.href = '/';
         }
 
-        // Global export functions
+        // Global functions
+        function showSection(section) {
+            if (window.scanResultsApp) {
+                window.scanResultsApp.showSection(section);
+            }
+        }
+
         function exportParameters() {
             if (window.scanResultsApp) {
                 window.scanResultsApp.exportParameters();
@@ -771,6 +777,7 @@
 
         // Initialize scan results when page loads
         const scanResults = new ScanResults();
+        window.scanResultsApp = scanResults; // Make it globally accessible
     </script>
 </body>
 </html>
