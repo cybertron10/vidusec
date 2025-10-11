@@ -3,6 +3,7 @@ package scanner
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"log"
 	"os"
 	"path/filepath"
@@ -11,6 +12,7 @@ import (
 
 	"vidusec/web/internal/database"
 	"vidusec/web/internal/crawler"
+	"github.com/google/uuid"
 )
 
 type Service struct {
@@ -36,11 +38,14 @@ func NewService(db *database.DB) *Service {
 
 // StartScan initiates a new security scan
 func (s *Service) StartScan(userID int, req *ScanRequest) (*ScanResponse, error) {
+	// Generate unique scan UUID
+	scanUUID := uuid.New().String()
+	
 	// Create scan record
 	result, err := s.db.Exec(`
-		INSERT INTO scans (user_id, target_url, max_depth, max_pages, status) 
-		VALUES (?, ?, ?, ?, 'pending')`,
-		userID, req.TargetURL, req.MaxDepth, req.MaxPages)
+		INSERT INTO scans (scan_uuid, user_id, target_url, max_depth, max_pages, status) 
+		VALUES (?, ?, ?, ?, ?, 'pending')`,
+		scanUUID, userID, req.TargetURL, req.MaxDepth, req.MaxPages)
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +56,7 @@ func (s *Service) StartScan(userID int, req *ScanRequest) (*ScanResponse, error)
 	}
 
 	// Start scan in background
-	go s.runScan(int(scanID), req)
+	go s.runScan(int(scanID), scanUUID, req)
 
 	return &ScanResponse{
 		ScanID:  int(scanID),
@@ -61,7 +66,7 @@ func (s *Service) StartScan(userID int, req *ScanRequest) (*ScanResponse, error)
 }
 
 // runScan executes the actual scanning process
-func (s *Service) runScan(scanID int, req *ScanRequest) {
+func (s *Service) runScan(scanID int, scanUUID string, req *ScanRequest) {
 	// Update status to running
 	now := time.Now()
 	_, err := s.db.Exec(`
@@ -504,5 +509,78 @@ func (s *Service) GetScanByHost(userID int, hostURL string) (*database.Scan, err
 	}
 	
 	return scan, nil
+}
+
+// GetScanByUUID retrieves a scan by UUID with authorization check
+func (s *Service) GetScanByUUID(scanUUID string, userID int) (*database.Scan, error) {
+	scan := &database.Scan{}
+	
+	err := s.db.QueryRow(`
+		SELECT id, scan_uuid, user_id, target_url, max_depth, max_pages, status, progress, started_at, completed_at, created_at
+		FROM scans 
+		WHERE scan_uuid = ? AND user_id = ?`,
+		scanUUID, userID).Scan(
+		&scan.ID, &scan.ScanUUID, &scan.UserID, &scan.TargetURL, &scan.MaxDepth, &scan.MaxPages,
+		&scan.Status, &scan.Progress, &scan.StartedAt, &scan.CompletedAt, &scan.CreatedAt)
+	
+	if err != nil {
+		return nil, err
+	}
+	
+	return scan, nil
+}
+
+// VerifyScanOwnership checks if a user owns a scan
+func (s *Service) VerifyScanOwnership(scanUUID string, userID int) error {
+	var count int
+	err := s.db.QueryRow(`
+		SELECT COUNT(*) FROM scans 
+		WHERE scan_uuid = ? AND user_id = ?`,
+		scanUUID, userID).Scan(&count)
+	
+	if err != nil {
+		return err
+	}
+	
+	if count == 0 {
+		return errors.New("scan not found or access denied")
+	}
+	
+	return nil
+}
+
+// DeleteScanByUUID deletes a scan by UUID with authorization check
+func (s *Service) DeleteScanByUUID(scanUUID string, userID int) error {
+	// Verify ownership first
+	err := s.VerifyScanOwnership(scanUUID, userID)
+	if err != nil {
+		return err
+	}
+
+	// Delete scan results first
+	_, err = s.db.Exec(`DELETE FROM scan_results WHERE scan_uuid = ?`, scanUUID)
+	if err != nil {
+		return err
+	}
+
+	// Delete scan statistics
+	_, err = s.db.Exec(`DELETE FROM scan_statistics WHERE scan_uuid = ?`, scanUUID)
+	if err != nil {
+		return err
+	}
+
+	// Delete scan files
+	_, err = s.db.Exec(`DELETE FROM scan_files WHERE scan_uuid = ?`, scanUUID)
+	if err != nil {
+		return err
+	}
+
+	// Delete the scan itself
+	_, err = s.db.Exec(`DELETE FROM scans WHERE scan_uuid = ? AND user_id = ?`, scanUUID, userID)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 

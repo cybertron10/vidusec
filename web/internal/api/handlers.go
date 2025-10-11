@@ -12,6 +12,7 @@ import (
 	"vidusec/web/internal/scanner"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 type Handler struct {
@@ -46,6 +47,11 @@ func sanitizeString(input string) string {
 func isValidScanID(idStr string) bool {
 	matched, _ := regexp.MatchString(`^\d+$`, idStr)
 	return matched
+}
+
+func isValidUUID(uuidStr string) bool {
+	_, err := uuid.Parse(uuidStr)
+	return err == nil
 }
 
 func normalizeURL(urlStr string) string {
@@ -270,32 +276,25 @@ func (h *Handler) GetScans(c *gin.Context) {
 	})
 }
 
-// GetScan retrieves a specific scan
+// GetScan retrieves a specific scan by UUID
 func (h *Handler) GetScan(c *gin.Context) {
 	userID := c.GetInt("user_id")
 
-	scanIDStr := c.Param("id")
+	scanUUID := c.Param("id")
 	
-	// Validate scan ID format
-	if !isValidScanID(scanIDStr) {
+	// Validate UUID format
+	if !isValidUUID(scanUUID) {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Invalid scan ID format",
 		})
 		return
 	}
-	
-	scanID, err := strconv.Atoi(scanIDStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid scan ID",
-		})
-		return
-	}
 
-	scan, err := h.scannerService.GetScan(scanID, userID)
+	// Get scan with authorization check
+	scan, err := h.scannerService.GetScanByUUID(scanUUID, userID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
-			"error": "Scan not found",
+			"error": "Scan not found or access denied",
 		})
 		return
 	}
@@ -305,43 +304,43 @@ func (h *Handler) GetScan(c *gin.Context) {
 	})
 }
 
-// DeleteScan deletes a specific scan
+// DeleteScan deletes a specific scan by UUID
 func (h *Handler) DeleteScan(c *gin.Context) {
 	userID := c.GetInt("user_id")
 
-	scanIDStr := c.Param("id")
-	scanID, err := strconv.Atoi(scanIDStr)
-	if err != nil {
-		log.Printf("Invalid scan ID in delete request: %s", scanIDStr)
+	scanUUID := c.Param("id")
+	
+	// Validate UUID format
+	if !isValidUUID(scanUUID) {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid scan ID",
+			"error": "Invalid scan ID format",
 		})
 		return
 	}
 
-	log.Printf("Delete scan request - UserID: %d, ScanID: %d", userID, scanID)
+	log.Printf("Delete scan request - UserID: %d, ScanUUID: %s", userID, scanUUID)
 	
-	// First check if scan exists
-	_, err = h.scannerService.GetScan(scanID, userID)
+	// Verify ownership before deletion
+	err := h.scannerService.VerifyScanOwnership(scanUUID, userID)
 	if err != nil {
-		log.Printf("Scan not found for deletion - UserID: %d, ScanID: %d, Error: %v", userID, scanID, err)
+		log.Printf("Scan access denied for deletion - UserID: %d, ScanUUID: %s, Error: %v", userID, scanUUID, err)
 		c.JSON(http.StatusNotFound, gin.H{
-			"error": "Scan not found",
+			"error": "Scan not found or access denied",
 		})
 		return
 	}
 
 	// Delete the scan
-	err = h.scannerService.DeleteScan(scanID, userID)
+	err = h.scannerService.DeleteScanByUUID(scanUUID, userID)
 	if err != nil {
-		log.Printf("Error deleting scan - UserID: %d, ScanID: %d, Error: %v", userID, scanID, err)
+		log.Printf("Error deleting scan - UserID: %d, ScanUUID: %s, Error: %v", userID, scanUUID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to delete scan",
 		})
 		return
 	}
 
-	log.Printf("Successfully deleted scan - UserID: %d, ScanID: %d", userID, scanID)
+	log.Printf("Successfully deleted scan - UserID: %d, ScanUUID: %s", userID, scanUUID)
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Scan deleted successfully",
 	})

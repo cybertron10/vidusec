@@ -57,6 +57,7 @@ func (db *DB) createTables() error {
 		// Scans table
 		`CREATE TABLE IF NOT EXISTS scans (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			scan_uuid TEXT UNIQUE NOT NULL,
 			user_id INTEGER NOT NULL,
 			target_url TEXT NOT NULL,
 			max_depth INTEGER DEFAULT 10,
@@ -73,6 +74,7 @@ func (db *DB) createTables() error {
 		`CREATE TABLE IF NOT EXISTS scan_results (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			scan_id INTEGER NOT NULL,
+			scan_uuid TEXT NOT NULL,
 			endpoint_type TEXT NOT NULL,
 			url TEXT NOT NULL,
 			method TEXT NOT NULL,
@@ -81,31 +83,36 @@ func (db *DB) createTables() error {
 			headers TEXT,
 			description TEXT,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-			FOREIGN KEY (scan_id) REFERENCES scans (id)
+			FOREIGN KEY (scan_id) REFERENCES scans (id),
+			FOREIGN KEY (scan_uuid) REFERENCES scans (scan_uuid)
 		)`,
 
 		// Scan statistics table
 		`CREATE TABLE IF NOT EXISTS scan_statistics (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			scan_id INTEGER NOT NULL,
+			scan_uuid TEXT NOT NULL,
 			total_endpoints INTEGER DEFAULT 0,
 			get_endpoints INTEGER DEFAULT 0,
 			post_endpoints INTEGER DEFAULT 0,
 			js_endpoints INTEGER DEFAULT 0,
 			total_parameters INTEGER DEFAULT 0,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-			FOREIGN KEY (scan_id) REFERENCES scans (id)
+			FOREIGN KEY (scan_id) REFERENCES scans (id),
+			FOREIGN KEY (scan_uuid) REFERENCES scans (scan_uuid)
 		)`,
 
 		// Scan files table (for storing generated files)
 		`CREATE TABLE IF NOT EXISTS scan_files (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			scan_id INTEGER NOT NULL,
+			scan_uuid TEXT NOT NULL,
 			file_type TEXT NOT NULL,
 			file_path TEXT NOT NULL,
 			file_size INTEGER DEFAULT 0,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-			FOREIGN KEY (scan_id) REFERENCES scans (id)
+			FOREIGN KEY (scan_id) REFERENCES scans (id),
+			FOREIGN KEY (scan_uuid) REFERENCES scans (scan_uuid)
 		)`,
 	}
 
@@ -119,9 +126,12 @@ func (db *DB) createTables() error {
 	indexes := []string{
 		"CREATE INDEX IF NOT EXISTS idx_scans_user_id ON scans(user_id)",
 		"CREATE INDEX IF NOT EXISTS idx_scans_status ON scans(status)",
+		"CREATE INDEX IF NOT EXISTS idx_scans_uuid ON scans(scan_uuid)",
 		"CREATE INDEX IF NOT EXISTS idx_scan_results_scan_id ON scan_results(scan_id)",
+		"CREATE INDEX IF NOT EXISTS idx_scan_results_scan_uuid ON scan_results(scan_uuid)",
 		"CREATE INDEX IF NOT EXISTS idx_scan_results_type ON scan_results(endpoint_type)",
 		"CREATE INDEX IF NOT EXISTS idx_scan_files_scan_id ON scan_files(scan_id)",
+		"CREATE INDEX IF NOT EXISTS idx_scan_files_scan_uuid ON scan_files(scan_uuid)",
 	}
 
 	for _, index := range indexes {

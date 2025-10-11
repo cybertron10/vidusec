@@ -19,6 +19,7 @@ type User struct {
 // Scan represents a security scan
 type Scan struct {
 	ID         int       `json:"id" db:"id"`
+	ScanUUID   string    `json:"scan_uuid" db:"scan_uuid"`
 	UserID     int       `json:"user_id" db:"user_id"`
 	TargetURL  string    `json:"target_url" db:"target_url"`
 	MaxDepth   int       `json:"max_depth" db:"max_depth"`
@@ -34,6 +35,7 @@ type Scan struct {
 type ScanResult struct {
 	ID          int                    `json:"id" db:"id"`
 	ScanID      int                    `json:"scan_id" db:"scan_id"`
+	ScanUUID    string                 `json:"scan_uuid" db:"scan_uuid"`
 	EndpointType string                `json:"endpoint_type" db:"endpoint_type"` // get, post, js_api
 	URL         string                 `json:"url" db:"url"`
 	Method      string                 `json:"method" db:"method"`
@@ -48,6 +50,7 @@ type ScanResult struct {
 type ScanStatistics struct {
 	ID              int       `json:"id" db:"id"`
 	ScanID          int       `json:"scan_id" db:"scan_id"`
+	ScanUUID        string    `json:"scan_uuid" db:"scan_uuid"`
 	TotalEndpoints  int       `json:"total_endpoints" db:"total_endpoints"`
 	GETEndpoints    int       `json:"get_endpoints" db:"get_endpoints"`
 	POSTEndpoints   int       `json:"post_endpoints" db:"post_endpoints"`
@@ -60,6 +63,7 @@ type ScanStatistics struct {
 type ScanFile struct {
 	ID       int       `json:"id" db:"id"`
 	ScanID   int       `json:"scan_id" db:"scan_id"`
+	ScanUUID string    `json:"scan_uuid" db:"scan_uuid"`
 	FileType string    `json:"file_type" db:"file_type"` // json, txt, csv
 	FilePath string    `json:"file_path" db:"file_path"`
 	FileSize int64     `json:"file_size" db:"file_size"`
