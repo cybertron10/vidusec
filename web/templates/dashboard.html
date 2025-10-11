@@ -126,6 +126,65 @@
         </div>
     </div>
 
+    <!-- New Scan Modal -->
+    <div id="newScanModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-900">New Scan</h2>
+                    <button id="closeNewScanModal" class="text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                
+                <form id="newScanForm">
+                    <div class="mb-4">
+                        <label for="newScanTargetUrl" class="block text-sm font-medium text-gray-700 mb-2">
+                            Target URL
+                        </label>
+                        <input id="newScanTargetUrl" type="url" required placeholder="https://example.com"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500">
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label for="newScanMaxDepth" class="block text-sm font-medium text-gray-700 mb-2">
+                                Max Depth
+                            </label>
+                            <input id="newScanMaxDepth" type="number" min="1" max="20" value="10"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500">
+                        </div>
+                        <div>
+                            <label for="newScanMaxPages" class="block text-sm font-medium text-gray-700 mb-2">
+                                Max Pages
+                            </label>
+                            <input id="newScanMaxPages" type="number" min="1" max="100000" value="20000"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500">
+                        </div>
+                    </div>
+
+                    <div class="mb-6">
+                        <label for="newScanHeaders" class="block text-sm font-medium text-gray-700 mb-2">
+                            Custom Headers (Optional)
+                        </label>
+                        <textarea id="newScanHeaders" rows="3" placeholder="Authorization: Bearer token&#10;X-Custom-Header: value"
+                                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"></textarea>
+                        <p class="text-xs text-gray-500 mt-1">Enter headers in format: Header-Name: Header-Value (one per line)</p>
+                    </div>
+
+                    <div class="flex justify-end space-x-3">
+                        <button type="button" id="cancelNewScan" class="px-4 py-2 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-md transition-colors">
+                            Cancel
+                        </button>
+                        <button type="submit" class="px-4 py-2 bg-purple-600 text-white hover:bg-purple-700 rounded-md transition-colors">
+                            <i class="fas fa-play mr-2"></i>Start Scan
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast Notifications -->
     <div id="toastContainer" class="fixed top-4 right-4 z-50"></div>
 
@@ -154,7 +213,7 @@
 
             setupEventListeners() {
                 document.getElementById('newScanBtn').addEventListener('click', () => {
-                    window.location.href = '/';
+                    this.showNewScanModal();
                 });
 
                 document.getElementById('logoutBtn').addEventListener('click', () => {
@@ -178,6 +237,28 @@
                 // Prevent clicks on modal content from closing the modal
                 document.getElementById('modalContent').addEventListener('click', (e) => {
                     e.stopPropagation();
+                });
+
+                // New Scan Modal event listeners
+                document.getElementById('closeNewScanModal').addEventListener('click', () => {
+                    this.hideNewScanModal();
+                });
+
+                document.getElementById('cancelNewScan').addEventListener('click', () => {
+                    this.hideNewScanModal();
+                });
+
+                // Close new scan modal when clicking outside
+                document.getElementById('newScanModal').addEventListener('click', (e) => {
+                    if (e.target.id === 'newScanModal') {
+                        this.hideNewScanModal();
+                    }
+                });
+
+                // New scan form submission
+                document.getElementById('newScanForm').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.submitNewScan();
                 });
             }
 
@@ -333,6 +414,61 @@
 
             hideResultsModal() {
                 document.getElementById('resultsModal').classList.add('hidden');
+            }
+
+            showNewScanModal() {
+                document.getElementById('newScanModal').classList.remove('hidden');
+                // Clear form
+                document.getElementById('newScanForm').reset();
+                document.getElementById('newScanMaxDepth').value = '10';
+                document.getElementById('newScanMaxPages').value = '20000';
+            }
+
+            hideNewScanModal() {
+                document.getElementById('newScanModal').classList.add('hidden');
+            }
+
+            async submitNewScan() {
+                const targetUrl = document.getElementById('newScanTargetUrl').value;
+                const maxDepth = parseInt(document.getElementById('newScanMaxDepth').value);
+                const maxPages = parseInt(document.getElementById('newScanMaxPages').value);
+                const headersText = document.getElementById('newScanHeaders').value;
+
+                // Parse headers
+                const headers = {};
+                if (headersText.trim()) {
+                    const headerLines = headersText.split('\n');
+                    for (const line of headerLines) {
+                        const [key, ...valueParts] = line.split(':');
+                        if (key && valueParts.length > 0) {
+                            headers[key.trim()] = valueParts.join(':').trim();
+                        }
+                    }
+                }
+
+                try {
+                    const response = await this.apiCall('/scanner/scan', {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            target_url: targetUrl,
+                            max_depth: maxDepth,
+                            max_pages: maxPages,
+                            headers: headers
+                        })
+                    });
+
+                    if (response.ok) {
+                        this.hideNewScanModal();
+                        this.showToast('Scan started successfully!', 'success');
+                        this.loadScans(); // Refresh the scans list
+                    } else {
+                        const error = await response.json();
+                        this.showToast(error.error || 'Failed to start scan', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error starting scan:', error);
+                    this.showToast('Error starting scan', 'error');
+                }
             }
 
             async deleteScan(scanUUID) {
