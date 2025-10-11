@@ -9,6 +9,7 @@ mkdir -p data/scans
 
 # Install dependencies
 echo "📦 Installing dependencies..."
+go get github.com/google/uuid
 go mod tidy
 
 # Build the application
