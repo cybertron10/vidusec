@@ -60,13 +60,13 @@ func normalizeURL(urlStr string) string {
 		return urlStr
 	}
 	
-	// Only normalize the scheme and host, keep the path
-	// This way http://example.com/admin and http://example.com/login are treated as different
+	// Normalize to just scheme + host for host-based matching
+	// This ensures http://example.com/ and http://example.com are treated as the same
 	normalized := u.Scheme + "://" + u.Host
 	
-	// Add path if it exists and is not just "/"
-	if u.Path != "" && u.Path != "/" {
-		normalized += u.Path
+	// Remove trailing slash to ensure consistency
+	if strings.HasSuffix(normalized, "/") {
+		normalized = normalized[:len(normalized)-1]
 	}
 	
 	return normalized
@@ -208,10 +208,11 @@ func (h *Handler) StartScan(c *gin.Context) {
 	}
 
 	// Check if there's an existing scan for the same host
+	log.Printf("Checking for existing scan - UserID: %d, NormalizedURL: %s", userID, normalizedURL)
 	existingScan, err := h.scannerService.GetScanByHost(userID, normalizedURL)
 	if err == nil && existingScan != nil {
 		// Overwrite existing scan instead of creating new one
-		log.Printf("Found existing scan %d for host %s, overwriting...", existingScan.ID, normalizedURL)
+		log.Printf("Found existing scan %d (UUID: %s) for host %s, overwriting...", existingScan.ID, existingScan.ScanUUID, normalizedURL)
 		_, err := h.scannerService.RescanScanByUUID(existingScan.ScanUUID, userID, &req)
 		if err != nil {
 			log.Printf("Error overwriting existing scan: %v", err)
@@ -227,6 +228,10 @@ func (h *Handler) StartScan(c *gin.Context) {
 			"message": "Existing scan updated successfully",
 		})
 		return
+	} else if err != nil {
+		log.Printf("Error checking for existing scan: %v", err)
+	} else {
+		log.Printf("No existing scan found for host %s, creating new scan", normalizedURL)
 	}
 
 	// Create new scan if no existing scan found

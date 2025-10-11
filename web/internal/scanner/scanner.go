@@ -496,21 +496,26 @@ func (s *Service) RescanScan(scanID, userID int, req *ScanRequest) (*ScanRespons
 func (s *Service) GetScanByHost(userID int, hostURL string) (*database.Scan, error) {
 	scan := &database.Scan{}
 	
-	// Find the most recent scan for this exact normalized URL
+	log.Printf("GetScanByHost called - UserID: %d, HostURL: %s", userID, hostURL)
+	
+	// Find the most recent scan for this host (with or without trailing slash)
+	// This handles cases where URLs might be stored with different formats
 	err := s.db.QueryRow(`
 		SELECT id, scan_uuid, user_id, target_url, status, progress, created_at
 		FROM scans 
-		WHERE user_id = ? AND target_url = ?
+		WHERE user_id = ? AND (target_url = ? OR target_url = ? || '/' OR target_url = ? || '//')
 		ORDER BY created_at DESC 
 		LIMIT 1`,
-		userID, hostURL).Scan(
+		userID, hostURL, hostURL, hostURL).Scan(
 		&scan.ID, &scan.ScanUUID, &scan.UserID, &scan.TargetURL, &scan.Status, 
 		&scan.Progress, &scan.CreatedAt)
 	
 	if err != nil {
+		log.Printf("GetScanByHost - No scan found for UserID: %d, HostURL: %s, Error: %v", userID, hostURL, err)
 		return nil, err
 	}
 	
+	log.Printf("GetScanByHost - Found scan ID: %d, UUID: %s, TargetURL: %s", scan.ID, scan.ScanUUID, scan.TargetURL)
 	return scan, nil
 }
 
