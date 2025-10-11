@@ -480,7 +480,7 @@ func (s *Service) RescanScan(scanID, userID int, req *ScanRequest) (*ScanRespons
 
 	// Start the scan in a goroutine using the existing runScan method
 	log.Printf("Starting rescan goroutine for scan %d", scanID)
-	go s.runScan(scanID, req)
+	go s.runScan(scanID, scan.ScanUUID, req)
 
 	return &ScanResponse{
 		ScanID:  scanID,
