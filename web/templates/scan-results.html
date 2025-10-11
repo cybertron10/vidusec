@@ -122,6 +122,10 @@
                             <i class="fas fa-code mr-3"></i>JavaScript APIs
                             <span id="javascriptCount" class="ml-auto bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full">0</span>
                         </button>
+                        <button id="parametersBtn" onclick="showSection('parameters')" class="sidebar-item w-full text-left px-4 py-3 rounded-lg font-medium text-gray-700">
+                            <i class="fas fa-list mr-3"></i>Parameters
+                            <span id="parametersCount" class="ml-auto bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded-full">0</span>
+                        </button>
                         <button id="exportBtn" onclick="exportResults()" class="sidebar-item w-full text-left px-4 py-3 rounded-lg font-medium text-gray-700">
                             <i class="fas fa-download mr-3"></i>Export Results
                         </button>
@@ -144,6 +148,9 @@
                                    <option value="JS">JavaScript APIs</option>
                                </select>
                                <input type="text" id="endpointSearch" placeholder="Search endpoints..." class="border border-gray-300 rounded-lg px-3 py-2 text-sm w-64">
+                               <button onclick="exportURLs()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                                   <i class="fas fa-download mr-2"></i>Export URLs
+                               </button>
                            </div>
                     </div>
                     <div id="endpointsList" class="space-y-4">
@@ -177,6 +184,21 @@
                         <p class="text-gray-500">JavaScript API analysis coming soon...</p>
                     </div>
                 </div>
+
+                <!-- Parameters Section -->
+                <div id="parametersSection" class="section hidden">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-xl font-semibold text-gray-900">Discovered Parameters</h3>
+                        <div class="flex space-x-2">
+                            <button onclick="exportParameters()" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                                <i class="fas fa-download mr-2"></i>Export as TXT
+                            </button>
+                        </div>
+                    </div>
+                    <div id="parametersList" class="space-y-2">
+                        <!-- Parameters will be loaded here -->
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -192,6 +214,7 @@
                 this.scanId = this.getScanIdFromUrl();
                 this.scanData = null;
                 this.results = [];
+                this.parameters = [];
                 this.currentSection = 'endpoints';
                 this.init();
             }
@@ -357,6 +380,11 @@
                 document.getElementById(`${section}Btn`).classList.add('active');
                 
                 this.currentSection = section;
+
+                // Load data for specific sections
+                if (section === 'parameters' && (!this.parameters || this.parameters.length === 0)) {
+                    this.loadParameters();
+                }
             }
 
             filterEndpoints() {
@@ -544,6 +572,117 @@
             }
 
 
+            async loadParameters() {
+                try {
+                    const response = await this.apiCall(`/scanner/scans/${this.scanId}/parameters`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        this.parameters = data.parameters || [];
+                        this.displayParameters();
+                        this.updateParametersCount();
+                    } else {
+                        console.error('Failed to load parameters:', response.status);
+                        this.showToast('Error loading parameters', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error loading parameters:', error);
+                    this.showToast('Error loading parameters', 'error');
+                }
+            }
+
+            displayParameters() {
+                const container = document.getElementById('parametersList');
+                if (!container) return;
+
+                if (this.parameters.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center py-12">
+                            <i class="fas fa-list text-4xl text-gray-400 mb-4"></i>
+                            <p class="text-gray-500">No parameters found</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = this.parameters.map(param => `
+                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 hover:bg-gray-100 transition-colors">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                                <i class="fas fa-tag text-purple-600 mr-3"></i>
+                                <span class="font-mono text-sm text-gray-900">${param}</span>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            updateParametersCount() {
+                const countElement = document.getElementById('parametersCount');
+                if (countElement) {
+                    countElement.textContent = this.parameters ? this.parameters.length : 0;
+                }
+            }
+
+            async exportParameters() {
+                try {
+                    const response = await this.apiCall(`/scanner/scans/${this.scanId}/parameters`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        const parameters = data.parameters || [];
+                        
+                        // Create text content
+                        const textContent = parameters.join('\n');
+                        
+                        // Create and download file
+                        const blob = new Blob([textContent], { type: 'text/plain' });
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `scan-${this.scanId}-parameters.txt`;
+                        document.body.appendChild(a);
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                        document.body.removeChild(a);
+                        this.showToast('Parameters exported successfully', 'success');
+                    } else {
+                        this.showToast('Error exporting parameters', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error exporting parameters:', error);
+                    this.showToast('Error exporting parameters', 'error');
+                }
+            }
+
+            async exportURLs() {
+                try {
+                    const response = await this.apiCall(`/scanner/scans/${this.scanId}/urls`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        const urls = data.urls || [];
+                        
+                        // Create text content
+                        const textContent = urls.join('\n');
+                        
+                        // Create and download file
+                        const blob = new Blob([textContent], { type: 'text/plain' });
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `scan-${this.scanId}-urls.txt`;
+                        document.body.appendChild(a);
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                        document.body.removeChild(a);
+                        this.showToast('URLs exported successfully', 'success');
+                    } else {
+                        this.showToast('Error exporting URLs', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error exporting URLs:', error);
+                    this.showToast('Error exporting URLs', 'error');
+                }
+            }
+
             logout() {
                 localStorage.removeItem('vidusec_token');
                 localStorage.removeItem('vidusec_user');
@@ -556,6 +695,19 @@
             localStorage.removeItem('vidusec_token');
             localStorage.removeItem('vidusec_user');
             window.location.href = '/';
+        }
+
+        // Global export functions
+        function exportParameters() {
+            if (window.scanResultsApp) {
+                window.scanResultsApp.exportParameters();
+            }
+        }
+
+        function exportURLs() {
+            if (window.scanResultsApp) {
+                window.scanResultsApp.exportURLs();
+            }
         }
 
         // Global function to toggle details sections

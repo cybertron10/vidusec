@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -500,6 +501,127 @@ func (h *Handler) RescanScan(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
+
+// GetScanParameters returns all unique parameters found in a scan
+func (h *Handler) GetScanParameters(c *gin.Context) {
+	userID := c.GetInt("user_id")
+	scanUUID := c.Param("id")
+	
+	// Validate UUID format
+	if !isValidUUID(scanUUID) {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid scan ID format",
+		})
+		return
+	}
+
+	// Verify scan ownership
+	err := h.scannerService.VerifyScanOwnership(scanUUID, userID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": "Scan not found or access denied",
+		})
+		return
+	}
+
+	// Get scan results to extract parameters
+	results, err := h.scannerService.GetScanResultsByUUID(scanUUID, userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to get scan results",
+		})
+		return
+	}
+
+	// Extract unique parameters
+	paramSet := make(map[string]bool)
+	for _, result := range results {
+		// Extract parameters from map
+		if result.Parameters != nil {
+			for param := range result.Parameters {
+				paramSet[param] = true
+			}
+		}
+		
+		// Extract form data from map
+		if result.FormData != nil {
+			for param := range result.FormData {
+				paramSet[param] = true
+			}
+		}
+	}
+
+	// Convert to sorted slice
+	var parameters []string
+	for param := range paramSet {
+		parameters = append(parameters, param)
+	}
+	sort.Strings(parameters)
+
+	c.JSON(http.StatusOK, gin.H{
+		"scan_id": scanUUID,
+		"parameters": parameters,
+		"count": len(parameters),
+	})
+}
+
+// GetScanURLs returns all GET URLs found in a scan
+func (h *Handler) GetScanURLs(c *gin.Context) {
+	userID := c.GetInt("user_id")
+	scanUUID := c.Param("id")
+	
+	// Validate UUID format
+	if !isValidUUID(scanUUID) {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid scan ID format",
+		})
+		return
+	}
+
+	// Verify scan ownership
+	err := h.scannerService.VerifyScanOwnership(scanUUID, userID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": "Scan not found or access denied",
+		})
+		return
+	}
+
+	// Get scan results to extract GET URLs
+	results, err := h.scannerService.GetScanResultsByUUID(scanUUID, userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to get scan results",
+		})
+		return
+	}
+
+	// Extract GET URLs
+	var urls []string
+	for _, result := range results {
+		if result.EndpointType == "get" {
+			urls = append(urls, result.URL)
+		}
+	}
+
+	// Remove duplicates and sort
+	urlSet := make(map[string]bool)
+	for _, url := range urls {
+		urlSet[url] = true
+	}
+	
+	var uniqueURLs []string
+	for url := range urlSet {
+		uniqueURLs = append(uniqueURLs, url)
+	}
+	sort.Strings(uniqueURLs)
+
+	c.JSON(http.StatusOK, gin.H{
+		"scan_id": scanUUID,
+		"urls": uniqueURLs,
+		"count": len(uniqueURLs),
+	})
+}
 
 // ExportScanResults exports scan results in various formats
 func (h *Handler) ExportScanResults(c *gin.Context) {
